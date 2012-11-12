@@ -63,61 +63,51 @@ def substacks(username):
 """
 
 
-def query_handler(username, json_data, fn):
-    connection = db.engine.connect()
-    trans = connection.begin()
-    code = NORMAL_REQUEST
-
-    try:
-        fn(username, json_data)
-    except Exception, e:
-        trans.rollback()
-        json_data["error"] = e.msg
-        code = BAD_REQUEST
-
-    return json.dumps(json_data), code
-
-
-
-
-@app.route("/media/<mtype>", methods=['POST'])
-@verify_login
-def add_media(username, mtype):
+def query_handler(fn, *args, **kwargs):
     json_data = request.json
-    name = json_data["name"]
-    description = json_data["description"]
-    filepath = json_data["file-path"]
-  
     connection = db.engine.connect()
     trans = connection.begin()
     code = NORMAL_REQUEST
-    try:
-        if name is not None and description is not None and mtype is not None and filepath is not None:
-            type_id_res = connection.execute('select id from cv_term where name="' + mtype + '";')
-            type_id = type_id_res.first()["id"]
-            lab_id_res = connection.execute('select id from cv_term where name="flyem";')
-            lab_id = lab_id_res.first()["id"]
-            connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
-                        str(lab_id) + ', ' + str(type_id) + ');')
 
-            media_id_res = connection.execute('select id from media where name="' + name + '"')
-            media_id = media_id_res.first()["id"]
-            property_id_res = connection.execute('select id from cv_term where name="file_system_path";')
-            property_id = property_id_res.first()["id"]
-            connection.execute('insert into media_property(media_id, type_id, value) values(' +
-                        str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
-            trans.commit()
-            json_data["media-id"] = media_id
-        else:
-            raise Exception("non-existent parameters")
+    try:
+        fn(json_data, *args, **kwargs)
     except Exception, e:
         trans.rollback()     
         json_data["error"] = str(e)
         code = BAD_REQUEST
     
     return json.dumps(json_data), code
-     
+ 
 
+def media_query(json_data, username, mtype):
+    name = json_data["name"]
+    description = json_data["description"]
+    filepath = json_data["file-path"]
+    if name is not None and description is not None and mtype is not None and filepath is not None:
+        type_id_res = connection.execute('select id from cv_term where name="' + mtype + '";')
+        type_id = type_id_res.first()["id"]
+        lab_id_res = connection.execute('select id from cv_term where name="flyem";')
+        lab_id = lab_id_res.first()["id"]
+        connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
+                    str(lab_id) + ', ' + str(type_id) + ');')
+
+        media_id_res = connection.execute('select id from media where name="' + name + '"')
+        media_id = media_id_res.first()["id"]
+        property_id_res = connection.execute('select id from cv_term where name="file_system_path";')
+        property_id = property_id_res.first()["id"]
+        connection.execute('insert into media_property(media_id, type_id, value) values(' +
+                    str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
+        trans.commit()
+        json_data["media-id"] = media_id
+    else:
+        raise Exception("non-existent parameters")
+
+
+@app.route("/media/<mtype>", methods=['POST'])
+@verify_login
+def add_media(username, mtype):
+    return query_handler(media_query, *args, **kwargs)
+    
 
 @app.route("/sessionusers", methods=['POST', 'DELETE'])
 @app.route("/sessionusers/<userid>", methods=['POST', 'DELETE'])
