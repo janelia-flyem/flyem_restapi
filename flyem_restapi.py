@@ -107,16 +107,14 @@ def add_media(username, mtype):
             connection.execute('insert into media_property(media_id, type_id, value) values(' +
                         str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
             trans.commit()
+            json_data["media-id"] = media_id
         else:
             raise Exception("non-existent parameters")
     except Exception, e:
         trans.rollback()     
-        json_data["error"] = e.msg
+        json_data["error"] = str(e)
         code = BAD_REQUEST
     
-
-    json_data["media-id"] = media_id
-
     return json.dumps(json_data), code
      
 
