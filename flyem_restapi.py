@@ -63,12 +63,55 @@ def substacks(username):
 """
 
 
-@app.route("/media/{type}", methods=['POST'])
+@app.route("/media/<mtype>", methods=['POST'])
 @verify_login
 def add_media(username, mtype):
-    
+    json_data = request.json
+    name = json_data["name"]
+    description = json_data["description"]
+    filepath = json_data["file-path"]
+   
+    try:
+        if name is not None and description is not None and mtype is not None and filepath is not None:
+            type_id_res = db.engine.execute('select id from cv_term where name="' + mtype + '";')
+            
+            for entry in type_id_res:
+                type_id = entry[0]
+
+            lab_id_res = db.engine.execute('select id from cv_term where name="flyem";')
+            
+            for entry in lab_id_res:
+                lab_id = entry[0]
+
+            q_str = 'insert into media(name, lab_id, type_id) values("' + name + '", ' + str(lab_id) + ', ' + str(type_id) + ');'
+            db.engine.execute(q_str)
+           
+
+            media_id_res = db.engine.execute('select id from media where name="' + name + '"')
+
+            for entry in media_id_res:
+                media_id = entry[0]
+            
+            property_id_res = db.engine.execute('select id from cv_term where name="file_system_path";')
+
+            for entry in property_id_res:
+                property_id = entry[0]
+
+            q_str = 'insert into media_property(media_id, type_id, value) values(' + str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");'
+            
+            db.engine.execute(q_str)
 
 
+
+        else:
+            raise Exception("non-existent parameters")
+    except:
+        abort(BAD_REQUEST)
+
+    json_data["media-id"] = media_id
+
+    return json.dumps(json_data) 
+     
 
 
 @app.route("/sessionusers", methods=['POST', 'DELETE'])
