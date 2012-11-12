@@ -63,19 +63,21 @@ def substacks(username):
 """
 
 
-def query_handler(json_data, fn):
+def query_handler(username, json_data, fn):
     connection = db.engine.connect()
     trans = connection.begin()
     code = NORMAL_REQUEST
 
     try:
-        fn(json_data)
+        fn(username, json_data)
     except Exception, e:
         trans.rollback()
         json_data["error"] = e.msg
         code = BAD_REQUEST
 
     return json.dumps(json_data), code
+
+
 
 
 @app.route("/media/<mtype>", methods=['POST'])
@@ -88,6 +90,7 @@ def add_media(username, mtype):
   
     connection = db.engine.connect()
     trans = connection.begin()
+    code = NORMAL_REQUEST
     try:
         if name is not None and description is not None and mtype is not None and filepath is not None:
             type_id_res = connection.execute('select id from cv_term where name="' + mtype + '";')
@@ -106,14 +109,15 @@ def add_media(username, mtype):
             trans.commit()
         else:
             raise Exception("non-existent parameters")
-    except:
+    except Exception, e:
         trans.rollback()     
-        abort(BAD_REQUEST)
+        json_data["error"] = e.msg
+        code = BAD_REQUEST
     
 
     json_data["media-id"] = media_id
 
-    return json.dumps(json_data)
+    return json.dumps(json_data), code
      
 
 
