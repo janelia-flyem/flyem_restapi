@@ -63,6 +63,21 @@ def substacks(username):
 """
 
 
+def query_handler(json_data, fn):
+    connection = db.engine.connect()
+    trans = connection.begin()
+    code = NORMAL_REQUEST
+
+    try:
+        fn(json_data)
+    except Exception, e:
+        trans.rollback()
+        json_data["error"] = e.msg
+        code = BAD_REQUEST
+
+    return json.dumps(json_data), code
+
+
 @app.route("/media/<mtype>", methods=['POST'])
 @verify_login
 def add_media(username, mtype):
@@ -70,47 +85,35 @@ def add_media(username, mtype):
     name = json_data["name"]
     description = json_data["description"]
     filepath = json_data["file-path"]
-   
+  
+    connection = db.engine.connect()
+    trans = connection.begin()
     try:
         if name is not None and description is not None and mtype is not None and filepath is not None:
-            type_id_res = db.engine.execute('select id from cv_term where name="' + mtype + '";')
-            
-            for entry in type_id_res:
-                type_id = entry[0]
+            type_id_res = connection.execute('select id from cv_term where name="' + mtype + '";')
+            type_id = type_id_res.first()["id"]
+            lab_id_res = connection.execute('select id from cv_term where name="flyem";')
+            lab_id = lab_id_res.first()["id"]
+            connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
+                        str(lab_id) + ', ' + str(type_id) + ');')
 
-            lab_id_res = db.engine.execute('select id from cv_term where name="flyem";')
-            
-            for entry in lab_id_res:
-                lab_id = entry[0]
-
-            q_str = 'insert into media(name, lab_id, type_id) values("' + name + '", ' + str(lab_id) + ', ' + str(type_id) + ');'
-            db.engine.execute(q_str)
-           
-
-            media_id_res = db.engine.execute('select id from media where name="' + name + '"')
-
-            for entry in media_id_res:
-                media_id = entry[0]
-            
-            property_id_res = db.engine.execute('select id from cv_term where name="file_system_path";')
-
-            for entry in property_id_res:
-                property_id = entry[0]
-
-            q_str = 'insert into media_property(media_id, type_id, value) values(' + str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");'
-            
-            db.engine.execute(q_str)
-
-
-
+            media_id_res = connection.execute('select id from media where name="' + name + '"')
+            media_id = media_id_res.first()["id"]
+            property_id_res = connection.execute('select id from cv_term where name="file_system_path";')
+            property_id = property_id_res.first()["id"]
+            connection.execute('insert into media_property(media_id, type_id, value) values(' +
+                        str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
+            trans.commit()
         else:
             raise Exception("non-existent parameters")
     except:
+        trans.rollback()     
         abort(BAD_REQUEST)
+    
 
     json_data["media-id"] = media_id
 
-    return json.dumps(json_data) 
+    return json.dumps(json_data)
      
 
 
