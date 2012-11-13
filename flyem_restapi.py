@@ -10,9 +10,46 @@ app.config['SQLALCHEMY_DATABASE_URI'] = SQLDB
 db = SQLAlchemy(app)
 from functools import wraps
 
+""" session informtation """
+
+# types of media supported (excluding workflow and workflow run)
+# and the actual media name it points to
+media_type = {}
+media_type["substack"] = "substack"
+media_type["tbar-ilp"] = "tbar_ilp"
+media_type["boundary-ilp"] = "boundary_ilp"
+media_type["segmentation-substack"] = "segmentation_substack"
+media_type["groundtruth-substack"] = "groundtruth_substack"
+
+# core media properties (not currently in media table)
+media_property = {}
+media_property["description"] = "description"
+media_property["file-path"] = "file_system_path"
+media_property["date"] = "create_date"
+
+# core workflow properties (not currently in media table)
+workflow_property = {}
+media_property["description"] = "description"
+workflow_property["owner"] = "owner"
+workflow_property["description"] = "description"
+workflow_property["date"] = "create_date"
+
+# core workflow_job properties (not current in media table)
+workflow_job_property = {}
+workflow_job_property["workflow-version"] = "workflow_version"
+workflow_job_property["start-time"] = "create_date"
+workflow_job_property["description"] = "description"
+
+# general globals
 authorization_stored = {}
+NORMAL_REQUEST = 200
+BAD_REQUEST = 400
+
+""" end session information """
 
 
+
+# wrapper for verifying login
 def verify_login(f):
     @wraps(f)
     def wrapper_func(*args, **kwargs):
@@ -34,10 +71,25 @@ def verify_login(f):
                 #r = conn.bind_s(dn, pw, ldap.AUTH_SIMPLE)
             
                 # !! COMMENT OUT -- dummy check for now
-                if username != "steve" or password != "blah":
+                if username != "plazas" or password != "password":
                     abort(401)
         except: 
             abort(401)
+
+        if request.method == 'POST' or request.method == 'DELETE' or request.method == 'PUT':
+            try:
+                print 'SELECT user_property.value as perm FROM user_property JOIN user ON user.id = user_property.user_id JOIN cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name = "workflow_run" and user.name = "' + username + '";'
+                results = db.engine.execute('SELECT user_property.value as perm FROM ' +
+                        'user_property JOIN user ON user.id = user_property.user_id JOIN ' + 
+                        'cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name ' +
+                        '= "workflow_run" and user.name = "' + username + '";')
+
+                result =  results.first()
+                if result is None or result["perm"] != '1':
+                    abort(401)
+            except Exception, e:
+                abort(401) 
+
         return f(username, *args, **kwargs)
     return wrapper_func
     
@@ -107,12 +159,15 @@ def set_media(name, mtype, connection):
 
 # set property for a given media id
 def set_media_property(media_id, property_name, value, connection):
-    property_id_res = connection.execute('select id from cv_term where name="' + property_name + '";')
-    property_id = property_id_res.first()["id"]
+    property_id = get_cv_term_id(property_name, connection)
     connection.execute('insert into media_property(media_id, type_id, value) values(' +
                 str(media_id) + ', ' + str(property_id) + ', "' + value + '");')
 
-def media_query(json_data, connection, username, mtype):
+def media_post(json_data, connection, username, mtype):
+    if mtype not in media_type:
+        raise Exception("Media type not found")
+    mtype = media_type[mtype]
+    
     name = json_data["name"]
     description = json_data["description"]
     filepath = json_data["file-path"]
@@ -132,7 +187,7 @@ def media_query(json_data, connection, username, mtype):
 @app.route("/media/<mtype>", methods=['POST'])
 @verify_login
 def add_media(username, mtype):
-    return query_handler(media_query, username, mtype)
+    return query_handler(media_post, username, mtype)
     
 
 @app.route("/sessionusers", methods=['POST'])
