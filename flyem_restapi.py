@@ -78,7 +78,6 @@ def verify_login(f):
 
         if request.method == 'POST' or request.method == 'DELETE' or request.method == 'PUT':
             try:
-                print 'SELECT user_property.value as perm FROM user_property JOIN user ON user.id = user_property.user_id JOIN cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name = "workflow_run" and user.name = "' + username + '";'
                 results = db.engine.execute('SELECT user_property.value as perm FROM ' +
                         'user_property JOIN user ON user.id = user_property.user_id JOIN ' + 
                         'cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name ' +
@@ -93,27 +92,6 @@ def verify_login(f):
         return f(username, *args, **kwargs)
     return wrapper_func
     
-"""
-@app.route("/substacks")
-@verify_login
-def substacks(username):
-    result = db.engine.execute('select substack, tbar_annot, psd_annot, focus_annot from fly_em_annotations_vw;')
-
-    json_data = {}
-    entries = []
-    for ent in result:
-        entry = {}
-        entry["substack"] = ent[0]
-        entry["tbar_annot"] = ent[1]
-        entry["psd_annot"] = ent[2]
-        entry["focus_annot"] = ent[3]
-        entries.append(entry)
-
-    json_data["annotations"] = entries
-
-    return json.dumps(json_data)
-"""
-
 # generic wrapper for all queries, json_data should be written to as appropriate
 # all queries should start with json_data and connection
 def query_handler(fn, *args):
