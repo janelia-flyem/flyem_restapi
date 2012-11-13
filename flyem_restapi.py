@@ -62,12 +62,16 @@ def substacks(username):
     return json.dumps(json_data)
 """
 
-
+# generic wrapper for all queries, json_data should be written to as appropriate
+# all queries should start with json_data and connection
 def query_handler(fn, *args):
     json_data = request.json
     connection = db.engine.connect()
     trans = connection.begin()
     code = NORMAL_REQUEST
+
+    if json_data is None:
+        json_data = {}
 
     try:
         fn(json_data, connection, *args)
@@ -78,31 +82,53 @@ def query_handler(fn, *args):
         code = BAD_REQUEST
     
     return json.dumps(json_data), code
- 
+
+
+# get the cv_term_id from a property_name
+def get_cv_term_id(property_name, connection):
+    type_id_res = connection.execute('select id from cv_term where name="' + 
+            property_name + '";')
+    type_id = type_id_res.first()["id"]
+    return type_id
+    
+
+# set media file
+def set_media(name, mtype, connection):
+    type_id = get_cv_term_id(mtype, connection)
+    lab_id = get_cv_term_id("flyem", connection)
+    
+    connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
+                str(lab_id) + ', ' + str(type_id) + ');')
+
+    media_id_res = connection.execute('select id from media where name="' + name + '"')
+    media_id = media_id_res.first()["id"]
+
+    return media_id
+
+# set property for a given media id
+def set_media_property(media_id, property_name, value, connection):
+    property_id_res = connection.execute('select id from cv_term where name="' + property_name + '";')
+    property_id = property_id_res.first()["id"]
+    connection.execute('insert into media_property(media_id, type_id, value) values(' +
+                str(media_id) + ', ' + str(property_id) + ', "' + value + '");')
 
 def media_query(json_data, connection, username, mtype):
     name = json_data["name"]
     description = json_data["description"]
     filepath = json_data["file-path"]
+    
     if name is not None and description is not None and mtype is not None and filepath is not None:
-        type_id_res = connection.execute('select id from cv_term where name="' + mtype + '";')
-        type_id = type_id_res.first()["id"]
-        lab_id_res = connection.execute('select id from cv_term where name="flyem";')
-        lab_id = lab_id_res.first()["id"]
-        connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
-                    str(lab_id) + ', ' + str(type_id) + ');')
-
-        media_id_res = connection.execute('select id from media where name="' + name + '"')
-        media_id = media_id_res.first()["id"]
-        property_id_res = connection.execute('select id from cv_term where name="file_system_path";')
-        property_id = property_id_res.first()["id"]
-        connection.execute('insert into media_property(media_id, type_id, value) values(' +
-                    str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
+        media_id = set_media(name, mtype, connection)
         json_data["media-id"] = media_id
+        
+        set_media_property(media_id, "file_system_path", filepath, connection)
+        set_media_property(media_id, "description", description, connection)
     else:
         raise Exception("Not all parameters were specified")
 
 
+# url input: media type
+# json input: name, description, file-path
 @app.route("/media/<mtype>", methods=['POST'])
 @verify_login
 def add_media(username, mtype):
