@@ -109,8 +109,8 @@ def add_media(username, mtype):
     return query_handler(media_query, username, mtype)
     
 
-@app.route("/sessionusers", methods=['POST', 'DELETE'])
-@app.route("/sessionusers/<userid>", methods=['POST', 'DELETE'])
+@app.route("/sessionusers", methods=['POST'])
+@app.route("/sessionusers/<userid>", methods=['DELETE'])
 @verify_login
 def sessionusers(username, userid=None):
     if request.method == 'DELETE':
@@ -123,7 +123,7 @@ def sessionusers(username, userid=None):
                 abort(401)
         else:
             abort(404)
-    elif userid is None:
+    elif request.method == 'POST' and userid is None:
         uid = str(binascii.b2a_hex(os.urandom(8)))
         secretkey = str(binascii.b2a_hex(os.urandom(8)))
         authorization_stored[uid] = (username, secretkey)
@@ -132,18 +132,8 @@ def sessionusers(username, userid=None):
         json_data['secretkey'] = secretkey
 
         return json.dumps(json_data)
-    else:
-        if userid not in authorization_stored:
-            abort(404)
-        else:
-            name, pw = authorization_stored[userid]
-            if name == username:
-                json_data = {}
-                json_data['uid'] = userid
-                json_data['secretkey'] = pw
-                return json.dumps(json_data) 
-            else:
-                abort(401)
+    
+    abort(401)
 
 if __name__ == "__main__":
     try:
