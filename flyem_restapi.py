@@ -63,14 +63,15 @@ def substacks(username):
 """
 
 
-def query_handler(fn, *args, **kwargs):
+def query_handler(fn, *args):
     json_data = request.json
     connection = db.engine.connect()
     trans = connection.begin()
     code = NORMAL_REQUEST
 
     try:
-        fn(json_data, *args, **kwargs)
+        fn(json_data, connection, *args)
+        trans.commit()     
     except Exception, e:
         trans.rollback()     
         json_data["error"] = str(e)
@@ -79,7 +80,7 @@ def query_handler(fn, *args, **kwargs):
     return json.dumps(json_data), code
  
 
-def media_query(json_data, username, mtype):
+def media_query(json_data, connection, username, mtype):
     name = json_data["name"]
     description = json_data["description"]
     filepath = json_data["file-path"]
@@ -97,16 +98,15 @@ def media_query(json_data, username, mtype):
         property_id = property_id_res.first()["id"]
         connection.execute('insert into media_property(media_id, type_id, value) values(' +
                     str(media_id) + ', ' + str(property_id) + ', "' + filepath + '");')
-        trans.commit()
         json_data["media-id"] = media_id
     else:
-        raise Exception("non-existent parameters")
+        raise Exception("Not all parameters were specified")
 
 
 @app.route("/media/<mtype>", methods=['POST'])
 @verify_login
 def add_media(username, mtype):
-    return query_handler(media_query, *args, **kwargs)
+    return query_handler(media_query, username, mtype)
     
 
 @app.route("/sessionusers", methods=['POST', 'DELETE'])
