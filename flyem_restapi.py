@@ -141,7 +141,12 @@ def set_media_property(media_id, property_name, value, connection):
     connection.execute('insert into media_property(media_id, type_id, value) values(' +
                 str(media_id) + ', ' + str(property_id) + ', "' + value + '");')
 
-def media_post(json_data, connection, username, mtype):
+
+
+
+""" media handlers """
+
+def media_post(json_data, connection, mtype):
     if mtype not in media_type:
         raise Exception("Media type not found")
     mtype = media_type[mtype]
@@ -160,13 +165,55 @@ def media_post(json_data, connection, username, mtype):
         raise Exception("Not all parameters were specified")
 
 
+def media_get(json_data, connection, mtype, mid):
+    where_str = ''
+
+    if mtype != None:
+        mtype = media_type[mtype]
+        where_str = 'WHERE cv_term.name ="' +  mtype + '"'
+        if mid != None:
+            where_str = where_str + ' AND media.id = "' + mid + '" '
+
+    results = connection.execute("SELECT media.name as name, media.id as mid, cv_term.name as type, " + 
+            "media.create_date as date FROM media JOIN cv_term on cv_term.id = media.type_id " + where_str + ";")
+
+    json_results = []
+
+    for result in results:
+        json_result = {}
+        json_result["name"] = result["name"]
+        json_result["id"] = result["mid"]
+        json_result["type"] = result["type"]
+        json_result["date"] = str(result["date"])
+        json_results.append(json_result)
+
+    json_data["results"] = json_results
+
+""" end media handlers """
+
+
+""" POST """
 # url input: media type
 # json input: name, description, file-path
-@app.route("/media/<mtype>", methods=['POST'])
+""" GET """
+# url input: media type=none, id=none
+# json_output: name/id, date, media_type_name, description, original_file_path
+
+@app.route("/media", methods=['GET'])
+@app.route("/media/<mtype>", methods=['POST', 'GET'])
+@app.route("/media/<mtype>/<mid>", methods=['GET'])
 @verify_login
-def add_media(username, mtype):
-    return query_handler(media_post, username, mtype)
+def media_route(username, mtype=None, mid=None):
+    if request.method == 'POST':
+        return query_handler(media_post, mtype)
+    elif request.method == 'GET':
+        return query_handler(media_get, mtype, mid)
     
+
+# url input: media type
+   
+
+
 
 @app.route("/sessionusers", methods=['POST'])
 @app.route("/sessionusers/<userid>", methods=['DELETE'])
