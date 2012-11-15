@@ -21,15 +21,19 @@ media_type["boundary-ilp"] = "boundary_ilp"
 media_type["segmentation-substack"] = "segmentation_substack"
 media_type["groundtruth-substack"] = "groundtruth_substack"
 
+rmedia_type = dict((reversed(item) for item in media_type.items()))
+
 # core media properties (not currently in media table)
 media_property = {}
 media_property["description"] = "description"
 media_property["file-path"] = "file_system_path"
 media_property["date"] = "create_date"
 
+rmedia_property = dict((reversed(item) for item in media_property.items()))
+
 # core workflow properties (not currently in media table)
 workflow_property = {}
-media_property["description"] = "description"
+workflow_property["description"] = "description"
 workflow_property["owner"] = "owner"
 workflow_property["description"] = "description"
 workflow_property["date"] = "create_date"
@@ -164,18 +168,26 @@ def media_post(json_data, connection, mtype):
     else:
         raise Exception("Not all parameters were specified")
 
-
-def media_get(json_data, connection, mtype, mid):
+# do a join with media properties and do a  where for cv_term description and one for original_file_path (2 queries)
+def media_get(json_data, connection, mtype, mid, pos1, pos2):
     where_str = ''
+    limit_str = ''
+    order_by = 'ORDER BY media.create_date DESC'
 
-    if mtype != None:
+    if pos1 is not None and pos2 is not None:
+        if pos2 < pos1:
+            raise Exception("Incorrect data range specified")
+        limit_str = ' LIMIT ' + str(pos1) + ', ' + str(pos2 - pos1 + 1) + ' '
+
+    if mtype is not None:
         mtype = media_type[mtype]
         where_str = 'WHERE cv_term.name ="' +  mtype + '"'
-        if mid != None:
+        if mid is not None:
             where_str = where_str + ' AND media.id = "' + mid + '" '
 
     results = connection.execute("SELECT media.name as name, media.id as mid, cv_term.name as type, " + 
-            "media.create_date as date FROM media JOIN cv_term on cv_term.id = media.type_id " + where_str + ";")
+            "media.create_date as date FROM media JOIN cv_term on cv_term.id = media.type_id " + where_str +
+            order_by + limit_str + ";")
 
     json_results = []
 
@@ -183,7 +195,7 @@ def media_get(json_data, connection, mtype, mid):
         json_result = {}
         json_result["name"] = result["name"]
         json_result["id"] = result["mid"]
-        json_result["type"] = result["type"]
+        json_result["type"] = rmedia_type[(result["type"])]
         json_result["date"] = str(result["date"])
         json_results.append(json_result)
 
@@ -198,19 +210,20 @@ def media_get(json_data, connection, mtype, mid):
 """ GET """
 # url input: media type=none, id=none
 # json_output: name/id, date, media_type_name, description, original_file_path
-
 @app.route("/media", methods=['GET'])
-@app.route("/media/<mtype>", methods=['POST', 'GET'])
-@app.route("/media/<mtype>/<mid>", methods=['GET'])
+@app.route("/media/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/media/<mtype>", methods=['POST'])
+@app.route("/media/<mtype>", methods=['GET'])
+@app.route("/media/<mtype>/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/media/<mtype>/<int:mid>", methods=['GET'])
 @verify_login
-def media_route(username, mtype=None, mid=None):
+def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
     if request.method == 'POST':
         return query_handler(media_post, mtype)
     elif request.method == 'GET':
-        return query_handler(media_get, mtype, mid)
+        return query_handler(media_get, mtype, mid, pos1, pos2)
     
 
-# url input: media type
    
 
 
