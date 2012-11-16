@@ -20,14 +20,16 @@ media_type["tbar-ilp"] = "tbar_ilp"
 media_type["boundary-ilp"] = "boundary_ilp"
 media_type["segmentation-substack"] = "segmentation_substack"
 media_type["groundtruth-substack"] = "groundtruth_substack"
-
 rmedia_type = dict((reversed(item) for item in media_type.items()))
 
+
+"""
 # core media properties (not currently in media table)
 media_property = {}
 media_property["description"] = "description"
 media_property["file-path"] = "file_system_path"
 media_property["date"] = "create_date"
+media_property["name"] = "name"
 
 rmedia_property = dict((reversed(item) for item in media_property.items()))
 
@@ -35,8 +37,8 @@ rmedia_property = dict((reversed(item) for item in media_property.items()))
 workflow_property = {}
 workflow_property["description"] = "description"
 workflow_property["owner"] = "owner"
-workflow_property["description"] = "description"
 workflow_property["date"] = "create_date"
+workflow_property["name"] = "name"
 
 # core workflow_job properties (not current in media table)
 workflow_job_property = {}
@@ -44,10 +46,13 @@ workflow_job_property["workflow-version"] = "workflow_version"
 workflow_job_property["start-time"] = "create_date"
 workflow_job_property["description"] = "description"
 
+"""
+
 # general globals
 authorization_stored = {}
 NORMAL_REQUEST = 200
 BAD_REQUEST = 400
+
 
 """ end session information """
 
@@ -168,7 +173,7 @@ def media_post(json_data, connection, mtype):
     else:
         raise Exception("Not all parameters were specified")
 
-# do a join with media properties and do a  where for cv_term description and one for original_file_path (2 queries)
+# only grab media with a file path (description is still optional)
 def media_get(json_data, connection, mtype, mid, pos1, pos2):
     where_str = ''
     limit_str = ''
@@ -185,18 +190,38 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
         if mid is not None:
             where_str = where_str + ' AND media.id = "' + mid + '" '
 
-    results = connection.execute("SELECT media.name as name, media.id as mid, cv_term.name as type, " + 
-            "media.create_date as date FROM media JOIN cv_term on cv_term.id = media.type_id " + where_str +
+    results = connection.execute("SELECT media_property.value as file_system_path, media.name AS name, " +
+            "media.id AS mid, cv_term.name AS type, " + 
+            "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
+            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
+            "ON cv_term2.id = media_property.type_id " + where_str + ' AND cv_term2.name = "file_system_path" ' +
+            order_by + limit_str + ";")
+
+    results_desc = connection.execute("SELECT media_property.value as description, media.name AS name, " +
+            "media.id AS mid, cv_term.name AS type, " + 
+            "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
+            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
+            "ON cv_term2.id = media_property.type_id " + where_str + ' AND cv_term2.name = "description" ' +
             order_by + limit_str + ";")
 
     json_results = []
+
+    descriptions = {}
+    for result in results_desc:
+        descriptions[(result["mid"])] = result["description"]
 
     for result in results:
         json_result = {}
         json_result["name"] = result["name"]
         json_result["id"] = result["mid"]
-        json_result["type"] = rmedia_type[(result["type"])]
+        if result["type"] in rmedia_type:
+            json_result["type"] = rmedia_type[(result["type"])]
         json_result["date"] = str(result["date"])
+
+        if result["mid"] in descriptions:
+            json_result["description"] = descriptions[(result["mid"])]
+#        json_result["description"] = result["description"]
+        json_result["file-path"] = result["file_system_path"]
         json_results.append(json_result)
 
     json_data["results"] = json_results
@@ -204,10 +229,10 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
 """ end media handlers """
 
 
-""" POST """
+### POST ###
 # url input: media type
 # json input: name, description, file-path
-""" GET """
+### GET ###
 # url input: media type=none, id=none
 # json_output: name/id, date, media_type_name, description, original_file_path
 @app.route("/media", methods=['GET'])
@@ -224,7 +249,60 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
         return query_handler(media_get, mtype, mid, pos1, pos2)
     
 
-   
+"""
+
+# support general queries to workflows -- default date sort
+@app.route("/owners/<owner>/workflows", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<int:pos1>-<int:pos2>", methods=['GET'])
+
+
+
+# no support for general queries for more specific workflow calls
+@app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<workflow_id>", methods=['GET'])
+
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['PUT', 'GET'])
+
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:mid>", methods=['PUT'])
+
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:mid>", methods=['PUT'])
+
+
+# support general queries (such as workflow type) to workflow jobs -- default date sort
+@app.route("/owners/<owner>/jobs", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<not>completed", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<not>completed/<int:pos1>-<int:pos2>", methods=['GET'])
+
+@app.route("/owners/<owner>/workflows/<workflow_id>/jobs", methods=['POST', 'GET']) # show comments
+@app.route("/owners/<owner>/workflows/<workflow_id>/jobs/<int:pos1>-<int:pos2>", methods=['GET']) # show comments
+
+
+# no support for general queries for more specific workflow job calls
+@app.route("/owners/<owner>/jobs/<int:job_id>", methods=['GET'])
+
+@app.route("/owners/<owner>/jobs/completed/<int:job_id>", methods=['PUT'])
+
+@app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
+
+@app.route("/owners/<owner>/jobs/<job_id>/comments", methods=['POST', 'GET'])
+
+
+
+"""
+
+
+
+
+
+
 
 
 
