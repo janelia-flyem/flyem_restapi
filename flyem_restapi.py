@@ -190,25 +190,54 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
         if mid is not None:
             where_str = where_str + ' AND media.id = "' + mid + '" '
 
-    results = connection.execute("SELECT media_property.value as file_system_path, media.name AS name, " +
-            "media.id AS mid, cv_term.name AS type, " + 
-            "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
-            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
-            "ON cv_term2.id = media_property.type_id " + where_str + ' AND cv_term2.name = "file_system_path" ' +
-            order_by + limit_str + ";")
+    name = request.args.get('name')
+    if name is not None:
+        if where_str == '':
+            where_str += "WHERE "
+        else:
+            where_str += "AND "
+        where_str = where_str + 'media.name LIKE "%%' + name.lower() + '%%" '
 
-    results_desc = connection.execute("SELECT media_property.value as description, media.name AS name, " +
-            "media.id AS mid, cv_term.name AS type, " + 
+    description = request.args.get('description')
+    if description is not None:
+        if where_str == '':
+            where_str += "WHERE "
+        else:
+            where_str += "AND "
+        where_str = where_str + 'mp2.value LIKE "%%' + description.lower() + '%%" '
+
+    file_path = request.args.get('file-path')
+    if file_path is not None:
+        if where_str == '':
+            where_str += "WHERE "
+        else:
+            where_str += "AND "
+        where_str = where_str + 'media_property.value LIKE "%%' + file_path.lower() + '%%" '
+
+    media_type_t = request.args.get('media-type')
+    if media_type_t is not None:
+        if where_str == '':
+            where_str += "WHERE "
+        else:
+            where_str += "AND "
+        
+        media_type_t = media_type_t.lower() 
+        if media_type_t in media_type:
+            media_type_t = media_type[media_type_t]
+            
+        where_str = where_str + 'cv_term.name LIKE "%%' + media_type_t + '%%" '
+
+
+    results = connection.execute("SELECT mp2.value as description, media_property.value " +
+            "AS file_system_path, media.name AS name, media.id AS mid, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
             "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
-            "ON cv_term2.id = media_property.type_id " + where_str + ' AND cv_term2.name = "description" ' +
+            "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
+            "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + where_str +
+            ' AND cv_term2.name = "file_system_path" AND cv_term3.name = "description" ' +
             order_by + limit_str + ";")
 
     json_results = []
-
-    descriptions = {}
-    for result in results_desc:
-        descriptions[(result["mid"])] = result["description"]
 
     for result in results:
         json_result = {}
@@ -217,10 +246,7 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
         if result["type"] in rmedia_type:
             json_result["type"] = rmedia_type[(result["type"])]
         json_result["date"] = str(result["date"])
-
-        if result["mid"] in descriptions:
-            json_result["description"] = descriptions[(result["mid"])]
-#        json_result["description"] = result["description"]
+        json_result["description"] = result["description"]
         json_result["file-path"] = result["file_system_path"]
         json_results.append(json_result)
 
