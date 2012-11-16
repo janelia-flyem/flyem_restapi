@@ -151,6 +151,24 @@ def set_media_property(media_id, property_name, value, connection):
                 str(media_id) + ', ' + str(property_id) + ', "' + value + '");')
 
 
+def where_builder(where_str, term_name, value, predicate="LIKE"):
+    if value is not None:
+        if where_str == '':
+            where_str += " WHERE "
+        else:
+            where_str += " AND "
+        if predicate == "LIKE":
+            where_str = where_str + term_name + ' LIKE "%%' + value.lower() + '%%" '
+        else:
+            where_str = where_str + term_name + ' = "' + value + '" '
+    return where_str
+
+def limit_builder(pos1, pos2):
+    if pos1 is not None and pos2 is not None:
+        if pos2 < pos1:
+            raise Exception("Incorrect data range specified")
+        limit_str = ' LIMIT ' + str(pos1) + ', ' + str(pos2 - pos1 + 1) + ' '
+    return limit_str
 
 
 """ media handlers """
@@ -173,68 +191,42 @@ def media_post(json_data, connection, mtype):
     else:
         raise Exception("Not all parameters were specified")
 
+
 # only grab media with a file path (description is still optional)
 def media_get(json_data, connection, mtype, mid, pos1, pos2):
     where_str = ''
     limit_str = ''
     order_by = 'ORDER BY media.create_date DESC'
 
-    if pos1 is not None and pos2 is not None:
-        if pos2 < pos1:
-            raise Exception("Incorrect data range specified")
-        limit_str = ' LIMIT ' + str(pos1) + ', ' + str(pos2 - pos1 + 1) + ' '
-
+    limit_str = limit_builder(pos1, pos2)
     if mtype is not None:
         mtype = media_type[mtype]
-        where_str = 'WHERE cv_term.name ="' +  mtype + '"'
-        if mid is not None:
-            where_str = where_str + ' AND media.id = "' + mid + '" '
+        where_str = where_builder(where_str, "cv_term.name", mtype, '=')
+        where_str = where_builder(where_str, "media.id", mid, '=')
 
     name = request.args.get('name')
-    if name is not None:
-        if where_str == '':
-            where_str += "WHERE "
-        else:
-            where_str += "AND "
-        where_str = where_str + 'media.name LIKE "%%' + name.lower() + '%%" '
-
+    where_str = where_builder(where_str, 'media.name', name)
+    
     description = request.args.get('description')
-    if description is not None:
-        if where_str == '':
-            where_str += "WHERE "
-        else:
-            where_str += "AND "
-        where_str = where_str + 'mp2.value LIKE "%%' + description.lower() + '%%" '
-
+    where_str = where_builder(where_str, 'mp2.value', description)
+    
     file_path = request.args.get('file-path')
-    if file_path is not None:
-        if where_str == '':
-            where_str += "WHERE "
-        else:
-            where_str += "AND "
-        where_str = where_str + 'media_property.value LIKE "%%' + file_path.lower() + '%%" '
-
+    where_str = where_builder(where_str, 'media_property.value', file_path)
+    
     media_type_t = request.args.get('media-type')
-    if media_type_t is not None:
-        if where_str == '':
-            where_str += "WHERE "
-        else:
-            where_str += "AND "
-        
-        media_type_t = media_type_t.lower() 
-        if media_type_t in media_type:
-            media_type_t = media_type[media_type_t]
-            
-        where_str = where_str + 'cv_term.name LIKE "%%' + media_type_t + '%%" '
+    if media_type_t in media_type:
+        media_type_t = media_type[media_type_t]
+    where_str = where_builder(where_str, 'cv_term.name', media_type_t)
 
-
+    where_str = where_builder(where_str, 'cv_term2.name', "file_system_path")
+    where_str = where_builder(where_str, 'cv_term3.name', "description")
+    
     results = connection.execute("SELECT mp2.value as description, media_property.value " +
             "AS file_system_path, media.name AS name, media.id AS mid, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
             "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
             "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
             "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + where_str +
-            ' AND cv_term2.name = "file_system_path" AND cv_term3.name = "description" ' +
             order_by + limit_str + ";")
 
     json_results = []
