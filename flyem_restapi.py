@@ -169,6 +169,7 @@ def where_builder(where_str, term_name, value, predicate="LIKE"):
     return where_str
 
 def limit_builder(pos1, pos2):
+    limit_str = ''
     if pos1 is not None and pos2 is not None:
         if pos2 < pos1:
             raise Exception("Incorrect data range specified")
@@ -194,9 +195,62 @@ def workflow_post(json_data, connection, owner, workflow_type):
     else:
         raise Exception("Not all parameters were specified")
 
-def workflow_get():
-    pass
+def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1, pos2):
+    where_str = ''
+    order_by = 'ORDER BY media.create_date DESC'
 
+    limit_str = limit_builder(pos1, pos2)
+    
+    where_str = where_builder(where_str, "media.id", workflow_id, '=')
+
+    name = request.args.get('name')
+    where_str = where_builder(where_str, 'media.name', name)
+    
+    where_str = where_builder(where_str, "cv_term.name", "workflow", '=')
+
+    where_str = where_builder(where_str, 'cv_term2.name', "workflow_type")
+    where_str = where_builder(where_str, 'media_property.value', workflow_type)
+    temp_type = request.args.get('workflow-type')
+    where_str = where_builder(where_str, 'media_property.value', temp_type)
+
+    where_str = where_builder(where_str, 'cv_term3.name', "description")
+    description = request.args.get('description')
+    where_str = where_builder(where_str, 'mp2.value', description)
+  
+    where_str = where_builder(where_str, 'cv_term4.name', "owner")
+    where_str = where_builder(where_str, 'mp3.value', owner, '=')
+
+    where_str = where_builder(where_str, 'cv_term5.name', "workflow_interface_version")
+    workflow_interface = request.args.get('interface-version')
+    where_str = where_builder(where_str, 'mp4.value', workflow_interface, '=')
+
+    results = connection.execute("SELECT mp4.value as interface_version, "
+            "mp2.value as description, media_property.value " +
+            "AS workflow_type, media.name AS name, media.id AS id, cv_term.name AS type, " + 
+            "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
+            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
+            "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
+            "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + 
+            "JOIN media_property AS mp3 ON mp3.media_id = " +
+            "media.id JOIN cv_term AS cv_term4 ON cv_term4.id = mp3.type_id " + 
+            "JOIN media_property AS mp4 ON mp4.media_id = " +
+            "media.id JOIN cv_term AS cv_term5 ON cv_term5.id = mp4.type_id " + 
+            where_str + order_by + limit_str + ";")
+
+    json_results = []
+
+    for result in results:
+        json_result = {}
+        json_result["name"] = result["name"]
+        json_result["id"] = result["id"]
+        json_result["date"] = str(result["date"])
+        json_result["description"] = result["description"]
+        json_result["workflow-type"] = result["workflow_type"]
+        json_result["owner"] = owner
+        json_result["interface-version"] = result["interface_version"]
+        json_results.append(json_result)
+
+    json_data["results"] = json_results
 
 
 
@@ -298,8 +352,8 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
 
 
 @app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>/<workflow_id>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
 def workflow_type(username, owner, workflow_type, workflow_id=None, pos1=None, pos2=None):
     if request.method == 'POST':
