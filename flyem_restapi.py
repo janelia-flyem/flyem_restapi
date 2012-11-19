@@ -119,7 +119,11 @@ def query_handler(fn, *args):
         trans.rollback()     
         json_data["error"] = str(e)
         code = BAD_REQUEST
-    
+    except:
+        trans.rollback()     
+        json_data["error"] = "Unknown error"
+        code = 500
+
     return json.dumps(json_data), code
 
 
@@ -135,7 +139,8 @@ def get_cv_term_id(property_name, connection):
 def set_media(name, mtype, connection):
     type_id = get_cv_term_id(mtype, connection)
     lab_id = get_cv_term_id("flyem", connection)
-    
+   
+
     connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
                 str(lab_id) + ', ' + str(type_id) + ');')
 
@@ -172,6 +177,28 @@ def limit_builder(pos1, pos2):
 
 
 """ media handlers """
+
+def workflow_post(json_data, connection, owner, workflow_type):
+    name = json_data["name"]
+    description = json_data["description"]
+    workflow_interface = json_data["workflow-interface-version"]
+
+    if name is not None and description is not None and workflow_interface is not None:
+        media_id = set_media(name, "workflow", connection)
+        json_data["workflow-id"] = media_id
+        
+        set_media_property(media_id, "description", description, connection)
+        set_media_property(media_id, "owner", owner, connection)
+        set_media_property(media_id, "workflow_type", workflow_type, connection)
+        set_media_property(media_id, "workflow_interface_version", workflow_interface, connection)
+    else:
+        raise Exception("Not all parameters were specified")
+
+def workflow_get():
+    pass
+
+
+
 
 def media_post(json_data, connection, mtype):
     if mtype not in media_type:
@@ -265,7 +292,27 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
         return query_handler(media_post, mtype)
     elif request.method == 'GET':
         return query_handler(media_get, mtype, mid, pos1, pos2)
-    
+
+
+
+
+
+@app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<workflow_id>", methods=['GET'])
+@verify_login
+def workflow_type(username, owner, workflow_type, workflow_id=None, pos1=None, pos2=None):
+    if request.method == 'POST':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_post, owner, workflow_type)
+    else:
+        return query_handler(workflow_get, owner, workflow_type, workflow_id, pos1, pos2)
+        
+
+
+
+
 
 """
 
@@ -276,10 +323,6 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
 
 
 # no support for general queries for more specific workflow calls
-@app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
-@app.route("/owners/<owner>/workflows/<workflow_type>/<workflow_id>", methods=['GET'])
-
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['POST', 'GET'])
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['PUT', 'GET'])
 
