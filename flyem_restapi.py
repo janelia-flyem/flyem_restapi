@@ -276,7 +276,7 @@ def workflow_param_get(json_data, connection, workflow_id, parameter):
     parameters = []
     for result in results:
         name, value = result["param"].split(':')
-        if parameter is not None and parameter == name:
+        if parameter is None or parameter == name:
             param = {}
             param["name"] = name
             param["value"] = value
