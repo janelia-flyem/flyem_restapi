@@ -201,7 +201,7 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
 
     limit_str = limit_builder(pos1, pos2)
     
-    where_str = where_builder(where_str, "media.id", workflow_id, '=')
+    where_str = where_builder(where_str, "media.id", str(workflow_id), '=')
 
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
@@ -252,7 +252,37 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
 
     json_data["results"] = json_results
 
+def workflow_param_post(json_data, connection, workflow_id):
+    param_list = []
+    for param in json_data["parameters"]:
+        name_value = param["name"] +  ":" + str(param["value"])
+        param_list.append(name_value)
+    
+    for param in param_list:
+        set_media_property(workflow_id, "workflow_param", param, connection)
 
+def workflow_param_put(json_data, connection, workflow_id, parameter):
+    set_media_property(workflow_id, "workflow_param", parameter + ":" + str(json_data["value"]), connection)
+
+
+def workflow_param_get(json_data, connection, workflow_id, parameter):
+    where_str = ''
+    where_str = where_builder(where_str, "media_property.media_id", str(workflow_id), '=')
+    where_str = where_builder(where_str, "cv_term.name", "workflow_param", '=')
+    
+    results = connection.execute("SELECT media_property.value AS param from media_property JOIN " +
+            "cv_term ON cv_term.id = media_property.type_id " + where_str)
+
+    parameters = []
+    for result in results:
+        name, value = result["param"].split(':')
+        if parameter is not None and parameter == name:
+            param = {}
+            param["name"] = name
+            param["value"] = value
+            parameters.append(param)
+
+    json_data["results"] = parameters
 
 def media_post(json_data, connection, mtype):
     if mtype not in media_type:
@@ -283,7 +313,7 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
     if mtype is not None:
         mtype = media_type[mtype]
         where_str = where_builder(where_str, "cv_term.name", mtype, '=')
-        where_str = where_builder(where_str, "media.id", mid, '=')
+        where_str = where_builder(where_str, "media.id", str(mid), '=')
 
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
@@ -351,41 +381,48 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
 
 
 
+@app.route("/owners/<owner>/workflows", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<workflow_type>/<workflow_id>", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<workflow_type>/<int:workflow_id>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
-def workflow_type(username, owner, workflow_type, workflow_id=None, pos1=None, pos2=None):
+def workflow_type(username, owner, workflow_type=None, workflow_id=None, pos1=None, pos2=None):
     if request.method == 'POST':
         if owner != username:
             abort(401)
         return query_handler(workflow_post, owner, workflow_type)
     else:
         return query_handler(workflow_get, owner, workflow_type, workflow_id, pos1, pos2)
-        
 
 
-
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['PUT', 'GET'])
+@verify_login
+def workflow_params(username, owner, workflow_id, parameter=None):
+    if request.method == 'POST':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_param_post, workflow_id)
+    elif request.method == 'PUT':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_param_put, workflow_id, parameter)
+    else:
+        return query_handler(workflow_param_get, workflow_id, parameter)     
 
 
 """
 
-# support general queries to workflows -- default date sort
-@app.route("/owners/<owner>/workflows", methods=['GET'])
-@app.route("/owners/<owner>/workflows/<int:pos1>-<int:pos2>", methods=['GET'])
 
 
 
 # no support for general queries for more specific workflow calls
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['PUT', 'GET'])
 
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:mid>", methods=['PUT'])
 
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:mid>", methods=['PUT'])
 
 
@@ -394,7 +431,7 @@ def workflow_type(username, owner, workflow_type, workflow_id=None, pos1=None, p
 @app.route("/owners/<owner>/jobs/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<not>completed", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<not>completed/<int:pos1>-<int:pos2>", methods=['GET'])
-
+`
 @app.route("/owners/<owner>/workflows/<workflow_id>/jobs", methods=['POST', 'GET']) # show comments
 @app.route("/owners/<owner>/workflows/<workflow_id>/jobs/<int:pos1>-<int:pos2>", methods=['GET']) # show comments
 
