@@ -128,9 +128,14 @@ def query_handler(fn, *args):
 
 
 # get the cv_term_id from a property_name
-def get_cv_term_id(property_name, connection):
-    type_id_res = connection.execute('select id from cv_term where name="' + 
-            property_name + '";')
+def get_cv_term_id(property_name, connection, cv_name = None):
+    where_str = ''
+
+    if cv_name is not None:
+        where_str = ' AND cv.name = "' + cv_name + '" '
+    
+    type_id_res = connection.execute('SELECT cv_term.id as id FROM cv_term JOIN cv ON ' +
+            'cv.id = cv_term.cv_id WHERE cv_term.name="' + property_name + '" ' + where_str + ';')
     type_id = type_id_res.first()["id"]
     return type_id
     
@@ -150,8 +155,8 @@ def set_media(name, mtype, connection):
     return media_id
 
 # set property for a given media id
-def set_media_property(media_id, property_name, value, connection):
-    property_id = get_cv_term_id(property_name, connection)
+def set_media_property(media_id, property_name, value, connection, cv_name = None):
+    property_id = get_cv_term_id(property_name, connection, cv_name)
     connection.execute('insert into media_property(media_id, type_id, value) values(' +
                 str(media_id) + ', ' + str(property_id) + ', "' + value + '");')
 
@@ -252,34 +257,39 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
 
     json_data["results"] = json_results
 
+def create_param_type_id(name, connection):
+    cv_id_res = connection.execute('SELECT id FROM cv WHERE name = "workflow_parameters"')
+    cv_id = cv_id_res.first()["id"]
+    connection.execute('INSERT IGNORE INTO cv_term(cv_id, name, definition, is_current, display_name, data_type) ' +
+            'VALUES(' + str(cv_id) + ', "' + name + '", "Parameter used in one of the workflows", 1, ' +
+            '"' + name + '", "text");')
+
+
 def workflow_param_post(json_data, connection, workflow_id):
-    param_list = []
     for param in json_data["parameters"]:
-        name_value = param["name"] +  ":" + str(param["value"])
-        param_list.append(name_value)
-    
-    for param in param_list:
-        set_media_property(workflow_id, "workflow_param", param, connection)
+        create_param_type_id(param["name"], connection)
+        set_media_property(workflow_id, str(param["name"]), str(param["value"]), connection, 'workflow_parameters')
 
 def workflow_param_put(json_data, connection, workflow_id, parameter):
-    set_media_property(workflow_id, "workflow_param", parameter + ":" + str(json_data["value"]), connection)
+    create_param_type_id(parameter, connection)
+    set_media_property(workflow_id, parameter, str(json_data["value"]), connection)
 
 
 def workflow_param_get(json_data, connection, workflow_id, parameter):
     where_str = ''
     where_str = where_builder(where_str, "media_property.media_id", str(workflow_id), '=')
-    where_str = where_builder(where_str, "cv_term.name", "workflow_param", '=')
+    where_str = where_builder(where_str, "cv.name", "workflow_parameters", '=')
     
-    results = connection.execute("SELECT media_property.value AS param from media_property JOIN " +
-            "cv_term ON cv_term.id = media_property.type_id " + where_str)
+    results = connection.execute("SELECT media_property.value AS value, cv_term.name AS name FROM "
+            + "media_property JOIN cv_term ON cv_term.id = media_property.type_id JOIN cv ON "
+            + "cv.id = cv_term.cv_id " + where_str)
 
     parameters = []
     for result in results:
-        name, value = result["param"].split(':')
-        if parameter is None or parameter == name:
+        if parameter is None or parameter == result["name"]:
             param = {}
-            param["name"] = name
-            param["value"] = value
+            param["name"] = result["name"]
+            param["value"] = result["value"]
             parameters.append(param)
 
     json_data["results"] = parameters
@@ -444,7 +454,7 @@ def workflow_params(username, owner, workflow_id, parameter=None):
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
 
-@app.route("/owners/<owner>/jobs/<job_id>/comments", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/jobs/<job_id>/comment", methods=['PUT', 'GET'])
 
 
 
