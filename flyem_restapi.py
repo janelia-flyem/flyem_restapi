@@ -270,6 +270,9 @@ def workflow_param_post(json_data, connection, workflow_id):
         create_param_type_id(param["name"], connection)
         set_media_property(workflow_id, str(param["name"]), str(param["value"]), connection, 'workflow_parameters')
 
+
+    
+   
 def workflow_param_put(json_data, connection, workflow_id, parameter):
     create_param_type_id(parameter, connection)
     set_media_property(workflow_id, parameter, str(json_data["value"]), connection)
@@ -448,9 +451,16 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
 def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id):
     pass
 
-# ?! -- protect againt other users marking complete
 def job_complete_put(json_data, connection, owner, job_id):
     set_media_property(job_id, "workflow_job_complete", "1", connection)
+
+def workflow_job_comment_put(json_data, connection, owner, job_id):
+    property_id = get_cv_term_id("comment", connection)
+
+    connection.execute('INSERT INTO media_property(media_id, type_id, value) VALUES(' +
+            str(job_id) + ', ' + str(property_id) + ', "' + str(json_data["value"]) + '") ' +
+            'ON DUPLICATE KEY UPDATE value = "' + str(json_data["value"]) + '";')  
+
 
 
 """ end media handlers """
@@ -585,25 +595,23 @@ def workflow_jobs(username, owner, workflow_id, pos1=None, pos2=None):
     else:
         return query_handler(job_query_get, None, workflow_id, pos1, pos2)
 
+
+@app.route("/owners/<owner>/jobs/<job_id>/comment", methods=['PUT', 'GET'])
+@verify_login
+def workflow_job_comment(username, owner, job_id):
+    if request.method == 'PUT':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_job_comment_put, owner, job_id)
+
 """
-
-
-
-
-
-
-
-
-
-# support general queries (such as workflow type) to workflow jobs -- default date sort
 
 
 
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
 
-# allow reviews
-@app.route("/owners/<owner>/jobs/<job_id>/comment", methods=['PUT', 'GET'])
+# allow updates
 
 
 
