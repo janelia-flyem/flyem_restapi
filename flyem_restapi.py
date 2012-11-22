@@ -450,7 +450,7 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
 
 # ?! -- protect againt other users marking complete
 def job_complete_put(json_data, connection, owner, job_id):
-    pass
+    set_media_property(job_id, "workflow_job_complete", "1", connection)
 
 
 """ end media handlers """
