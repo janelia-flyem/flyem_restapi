@@ -415,6 +415,44 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
 
     json_data["results"] = json_results
 
+def workflow_jobs_post(json_data, connection, owner, workflow_id):
+    workflow_version = json_data["workflow-version"]
+    description = json_data["description"]
+    json_data["workflow-id"] = workflow_id
+    json_data["workflow-job-complete"] = 0
+
+    if description is not None and workflow_version is not None:
+        num_jobs_res = connection.execute('SELECT cv_term.id from media_relationship JOIN cv_term ON ' +
+               'cv_term.id = media_relationship.type_id WHERE cv_term.name = "workflow_to_workflow_job" AND ' +
+               'media_relationship.subject_id = ' + str(workflow_id) + ';') 
+
+        max_index = 1
+        for job in num_jobs_res:
+            max_index += 1 
+
+        name =  str(workflow_id) + "-job-" + str(max_index)
+        json_data["job-name"] = name 
+
+        # ?! return date on post
+        media_id = set_media(name, "workflow_job", connection)
+        json_data["job-id"] = media_id
+        
+        set_media_property(media_id, "description", description, connection)
+        set_media_property(media_id, "owner", owner, connection)
+        #set_media_property(media_id, "workflow_job_complete", "0", connection)
+        set_media_property(media_id, "workflow_version", workflow_version, connection)
+    else:
+        raise Exception("Not all parameters were specified")
+
+# ?!
+def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id):
+    pass
+
+# ?! -- protect againt other users marking complete
+def job_complete_put(json_data, connection, owner, job_id):
+    pass
+
+
 """ end media handlers """
 
 
@@ -503,35 +541,68 @@ def workflow_workflow(username, owner, workflow_id, wid=None):
     else:
         return query_handler(workflow_workflow_get, workflow_id)     
 
+##############################################################################
 
-        
+# workflow checks: workflow queries, workflow_version, workflow job complete, comment, description
+# return all workflow properties when returning job info (also workflow version, start time, description, comment )
+
+@app.route("/owners/<owner>/jobs", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/jobs/<int:job_id>", methods=['GET'])
+@verify_login
+def jobs_basic(username, owner, pos1=None, pos2=None, job_id=None):
+    return query_handler(job_query_get, owner, None, None, pos1, pos2, job_id)
+
+@app.route("/owners/<owner>/jobs/completed", methods=['GET'])
+@app.route("/owners/<owner>/jobs/completed/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/owners/<owner>/jobs/completed/<int:job_id>", methods=['PUT'])
+@verify_login
+def jobs_completed(username, owner, pos1=None, pos2=None, job_id = None):
+    if request.method == 'PUT':
+        if owner != username:
+            abort(401)
+        return query_handler(job_complete_put, owner, job_id)
+    else:
+        return query_handler(job_query_get, owner, True, None, pos1, pos2)
+
+
+@app.route("/owners/<owner>/jobs/notcompleted", methods=['GET'])
+@app.route("/owners/<owner>/jobs/notcompleted/<int:pos1>-<int:pos2>", methods=['GET'])
+@verify_login
+def jobs_notcompleted(username, owner, pos1=None, pos2=None):
+    return query_handler(job_query_get, owner, False, None, pos1, pos2)
+
+
+# job number will be name of workflow with the number of jobs for that workflow
+@app.route("/owners/<owner>/workflows/<workflow_id>/jobs", methods=['POST', 'GET']) # show comments
+@app.route("/owners/<owner>/workflows/<workflow_id>/jobs/<int:pos1>-<int:pos2>", methods=['GET']) # show comments
+@verify_login
+def workflow_jobs(username, owner, workflow_id, pos1=None, pos2=None):
+    if request.method == 'POST':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_jobs_post, owner, workflow_id)
+    else:
+        return query_handler(job_query_get, None, workflow_id, pos1, pos2)
+
 """
 
 
 
 
-# no support for general queries for more specific workflow calls
+
+
 
 
 
 # support general queries (such as workflow type) to workflow jobs -- default date sort
-@app.route("/owners/<owner>/jobs", methods=['GET'])
-@app.route("/owners/<owner>/jobs/<int:pos1>-<int:pos2>", methods=['GET'])
-@app.route("/owners/<owner>/jobs/<not>completed", methods=['GET'])
-@app.route("/owners/<owner>/jobs/<not>completed/<int:pos1>-<int:pos2>", methods=['GET'])
-`
-@app.route("/owners/<owner>/workflows/<workflow_id>/jobs", methods=['POST', 'GET']) # show comments
-@app.route("/owners/<owner>/workflows/<workflow_id>/jobs/<int:pos1>-<int:pos2>", methods=['GET']) # show comments
 
 
-# no support for general queries for more specific workflow job calls
-@app.route("/owners/<owner>/jobs/<int:job_id>", methods=['GET'])
-
-@app.route("/owners/<owner>/jobs/completed/<int:job_id>", methods=['PUT'])
 
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
 
+# allow reviews
 @app.route("/owners/<owner>/jobs/<job_id>/comment", methods=['PUT', 'GET'])
 
 
