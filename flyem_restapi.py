@@ -149,10 +149,12 @@ def set_media(name, mtype, connection):
     connection.execute('insert into media(name, lab_id, type_id) values("' + name + '", ' +
                 str(lab_id) + ', ' + str(type_id) + ');')
 
-    media_id_res = connection.execute('select id from media where name="' + name + '"')
-    media_id = media_id_res.first()["id"]
+    media_id_res = connection.execute('select id, create_date from media where name="' + name + '"')
+    media_entry = media_id_res.first()
+    media_id = media_entry["id"]
+    create_date = media_entry["create_date"]
 
-    return media_id
+    return media_id, str(create_date)
 
 # set property for a given media id
 def set_media_property(media_id, property_name, value, connection, cv_name = None):
@@ -190,7 +192,7 @@ def workflow_post(json_data, connection, owner, workflow_type):
     workflow_interface = json_data["workflow-interface-version"]
 
     if name is not None and description is not None and workflow_interface is not None:
-        media_id = set_media(name, "workflow", connection)
+        media_id, dummy = set_media(name, "workflow", connection)
         json_data["workflow-id"] = media_id
         
         set_media_property(media_id, "description", description, connection)
@@ -357,7 +359,7 @@ def media_post(json_data, connection, mtype):
     filepath = json_data["file-path"]
     
     if name is not None and description is not None and mtype is not None and filepath is not None:
-        media_id = set_media(name, mtype, connection)
+        media_id, dummy = set_media(name, mtype, connection)
         json_data["media-id"] = media_id
         
         set_media_property(media_id, "file_system_path", filepath, connection)
@@ -434,16 +436,19 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
             max_index += 1 
 
         name =  str(workflow_id) + "-job-" + str(max_index)
-        json_data["job-name"] = name 
 
-        # ?! return date on post
-        media_id = set_media(name, "workflow_job", connection)
-        json_data["job-id"] = media_id
-        
+        media_id, create_date = set_media(name, "workflow_job", connection)
+       
+        insert_relationship(workflow_id, media_id, "workflow_to_workflow_job", connection) 
+
         set_media_property(media_id, "description", description, connection)
         set_media_property(media_id, "owner", owner, connection)
         #set_media_property(media_id, "workflow_job_complete", "0", connection)
         set_media_property(media_id, "workflow_version", workflow_version, connection)
+        
+        json_data["job-name"] = name 
+        json_data["job-id"] = media_id
+        json_data["job-start-time"] = create_date
     else:
         raise Exception("Not all parameters were specified")
 
