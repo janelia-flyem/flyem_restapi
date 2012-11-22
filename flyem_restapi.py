@@ -466,6 +466,15 @@ def workflow_job_comment_put(json_data, connection, owner, job_id):
             str(job_id) + ', ' + str(property_id) + ', "' + str(json_data["value"]) + '") ' +
             'ON DUPLICATE KEY UPDATE value = "' + str(json_data["value"]) + '";')  
 
+def workflow_job_comment_get(json_data, connection, job_id):
+    where_str = ''
+    where_str = where_builder(where_str, "media_property.media_id", str(job_id), '=')
+    where_str = where_builder(where_str, "cv_term.name", "comment", '=')
+   
+    results = connection.execute("SELECT media_property.value AS value FROM "
+            + "media_property JOIN cv_term ON cv_term.id = media_property.type_id " + where_str)
+
+    json_data["value"] = results.first()["value"]
 
 
 """ end media handlers """
@@ -608,13 +617,32 @@ def workflow_job_comment(username, owner, job_id):
         if owner != username:
             abort(401)
         return query_handler(workflow_job_comment_put, owner, job_id)
+    else:
+        return query_handler(workflow_job_comment_get, job_id)
+
+
+@app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
+@verify_login
+def job_job(username, owner, workflow_id, wid=None):
+    if request.method == 'POST':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_workflow_post, workflow_id)
+    elif request.method == 'PUT':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_workflow_put, workflow_id, wid)
+    else:
+        return query_handler(workflow_workflow_get, workflow_id)     
+
+
+
 
 """
 
 
 
-@app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['GET'])
-@app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
 
 # allow updates
 
