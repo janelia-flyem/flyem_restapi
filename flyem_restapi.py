@@ -294,6 +294,35 @@ def workflow_param_get(json_data, connection, workflow_id, parameter):
 
     json_data["results"] = parameters
 
+def insert_relationship(parent, child, type_name, connection):
+    type_id = get_cv_term_id(type_name, connection)
+    connection.execute("INSERT INTO media_relationship(type_id, subject_id, object_id, is_current) " +
+            "VALUES(" + str(type_id) + ", " + str(parent) + ", " + str(child) + ", 1)")
+
+
+def workflow_media_post(json_data, connection, workflow_id):
+    for mid in json_data["media-inputs"]:
+        insert_relationship(mid, workflow_id, "media_to_workflow", connection)    
+    
+def workflow_media_put(json_data, connection, workflow_id, mid):
+    insert_relationship(mid, workflow_id, "media_to_workflow", connection)    
+
+def workflow_media_get(json_data, connection, workflow_id):
+    where_str = ''
+    where_str = where_builder(where_str, "media_relationship.object_id", str(workflow_id), '=')
+    where_str = where_builder(where_str, "cv_term.name", "media_to_workflow", '=')
+    
+    results = connection.execute("SELECT media_relationship.subject_id AS parent FROM "
+            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id "
+            + where_str)
+
+    media_inputs = []
+    for result in results:
+        media_inputs.append(result["parent"])
+
+    json_data["media-inputs"] = media_inputs 
+
+
 def media_post(json_data, connection, mtype):
     if mtype not in media_type:
         raise Exception("Media type not found")
@@ -422,6 +451,23 @@ def workflow_params(username, owner, workflow_id, parameter=None):
         return query_handler(workflow_param_get, workflow_id, parameter)     
 
 
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:mid>", methods=['PUT'])
+@verify_login
+def workflow_media(username, owner, workflow_id, mid=None):
+    if request.method == 'POST':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_media_post, workflow_id)
+    elif request.method == 'PUT':
+        if owner != username:
+            abort(401)
+        return query_handler(workflow_media_put, workflow_id, mid)
+    else:
+        return query_handler(workflow_media_get, workflow_id)     
+
+        
+        
 """
 
 
@@ -429,8 +475,6 @@ def workflow_params(username, owner, workflow_id, parameter=None):
 
 # no support for general queries for more specific workflow calls
 
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:mid>", methods=['PUT'])
 
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['POST', 'GET'])
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:mid>", methods=['PUT'])
