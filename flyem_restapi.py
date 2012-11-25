@@ -454,7 +454,35 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
 
 # ?!
 def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id):
-    pass
+    where_str = ''
+    order_by = 'ORDER BY media.create_date DESC'
+    limit_str = limit_builder(pos1, pos2)
+
+    # just do brute force
+    # job proper -- name, date?
+    # job properties -- description, comment, owner, complete_status, version, id
+    # workflow_properties -- type_name, interface_version, description, name, id
+    # ?? missing comments -- left outer join?
+
+
+
+    json_results = []
+
+    for result in results:
+        json_result = {}
+        json_result["name"] = result["name"]
+        json_result["id"] = result["id"]
+        json_result["date"] = str(result["date"])
+        json_result["description"] = result["description"]
+        json_result["workflow-type"] = result["workflow_type"]
+        json_result["owner"] = owner
+        json_result["interface-version"] = result["interface_version"]
+        json_results.append(json_result)
+
+    json_data["results"] = json_results
+
+
+
 
 def job_complete_put(json_data, connection, owner, job_id):
     set_media_property(job_id, "workflow_job_complete", "1", connection)
@@ -475,6 +503,31 @@ def workflow_job_comment_get(json_data, connection, job_id):
             + "media_property JOIN cv_term ON cv_term.id = media_property.type_id " + where_str)
 
     json_data["value"] = results.first()["value"]
+
+
+def job_job_post(json_data, connection, job_id):
+    for parent_id in json_data["job-inputs"]:
+        insert_relationship(parent_id, job_id, "workflow_job_to_workflow_job", connection)    
+    
+def job_job_put(json_data, connection, job_id, parent_id):
+    insert_relationship(parent_id, job_id, "workflow_job_to_workflow_job", connection)    
+
+def job_job_get(json_data, connection, job_id):
+    where_str = ''
+    where_str = where_builder(where_str, "media_relationship.object_id", str(job_id), '=')
+    where_str = where_builder(where_str, "cv_term.name", "workflow_job_to_workflow_job", '=')
+    
+    results = connection.execute("SELECT media_relationship.subject_id AS parent FROM "
+            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id "
+            + where_str)
+
+    job_inputs = []
+    for result in results:
+        job_inputs.append(result["parent"])
+
+    json_data["job-inputs"] = job_inputs 
+
+
 
 
 """ end media handlers """
@@ -621,39 +674,20 @@ def workflow_job_comment(username, owner, job_id):
         return query_handler(workflow_job_comment_get, job_id)
 
 
-@app.route("/owners/<owner>/jobs/<job_id>/job-parents", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/jobs/<job_id>/job-parents/<par_id>", methods=['PUT'])
+@app.route("/owners/<owner>/jobs/<job_id>/job-inputs", methods=['POST', 'GET'])
+@app.route("/owners/<owner>/jobs/<job_id>/job-inputs/<par_id>", methods=['PUT'])
 @verify_login
-def job_job(username, owner, workflow_id, wid=None):
+def job_job(username, owner, job_id, par_id=None):
     if request.method == 'POST':
         if owner != username:
             abort(401)
-        return query_handler(workflow_workflow_post, workflow_id)
+        return query_handler(job_job_post, job_id)
     elif request.method == 'PUT':
         if owner != username:
             abort(401)
-        return query_handler(workflow_workflow_put, workflow_id, wid)
+        return query_handler(job_job_put, job_id, par_id)
     else:
-        return query_handler(workflow_workflow_get, workflow_id)     
-
-
-
-
-"""
-
-
-
-
-# allow updates
-
-
-
-"""
-
-
-
-
-
+        return query_handler(job_job_get, job_id)     
 
 
 
