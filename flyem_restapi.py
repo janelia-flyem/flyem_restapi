@@ -169,6 +169,7 @@ def where_builder(where_str, term_name, value, predicate="LIKE"):
             where_str += " WHERE "
         else:
             where_str += " AND "
+        value = str(value)
         if predicate == "LIKE":
             where_str = where_str + term_name + ' LIKE "%%' + value.lower() + '%%" '
         else:
@@ -208,7 +209,7 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
 
     limit_str = limit_builder(pos1, pos2)
     
-    where_str = where_builder(where_str, "media.id", str(workflow_id), '=')
+    where_str = where_builder(where_str, "media.id", workflow_id, '=')
 
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
@@ -453,30 +454,100 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
         raise Exception("Not all parameters were specified")
 
 # ?!
-def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id):
+def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id=None):
     where_str = ''
     order_by = 'ORDER BY media.create_date DESC'
     limit_str = limit_builder(pos1, pos2)
 
-    # just do brute force
-    # job proper -- name, date?
-    # job properties -- description, comment, owner, complete_status, version, id
-    # workflow_properties -- type_name, interface_version, description, name, id
-    # ?? missing comments -- left outer join?
+    comment_id = get_cv_term_id("comment", connection)
+    completion_id = get_cv_term_id("workflow_job_complete", connection)
 
+    where_str = where_builder(where_str, "media.id", job_id, '=')
+    
+    name = request.args.get('name') 
+    where_str = where_builder(where_str, "media.name", name)
+    
+    where_str = where_builder(where_str, "cv_term.name", "workflow_job", '=')
+
+    where_str = where_builder(where_str, 'cv_term2.name', "workflow_version")
+    workflow_version = request.args.get('workflow-version') 
+    where_str = where_builder(where_str, 'media_property.value', workflow_version)
+    
+    where_str = where_builder(where_str, 'cv_term3.name', "description")
+    description = request.args.get('description')
+    where_str = where_builder(where_str, 'mp2.value', description)
+  
+    where_str = where_builder(where_str, 'cv_term4.name', "owner")
+    where_str = where_builder(where_str, 'mp3.value', owner, '=')
+
+    # JOIN MEDIA_RELATIONSHIP
+    where_str = where_builder(where_str, "cv_term5.name", "workflow_to_workflow_job", '=')
+    workflow_name = request.args.get('workflow-name')
+    where_str = where_builder(where_str, "media_wf.name", workflow_name)
+    where_str = where_builder(where_str, "media_wf.id", workflow_id)
+    
+
+    # LEFT JOIN special for comment and complete date
+    comment = request.args.get('comment')
+    where_str = where_builder(where_str, 'm_comment.value', comment)
+
+    if complete_status is not None:
+        if where_str == '':
+            where_str += " WHERE "
+        else:
+            where_str += " AND "    
+        if complete_status:
+            where_str = where_str + "m_status.value IS NOT NULL "
+        else:
+            where_str = where_str + "m_status.value IS NULL "
+
+    status = request.args.get('is-completed')
+    if status is not None:
+        if where_str == '':
+            where_str += " WHERE "
+        else:
+            where_str += " AND "    
+        if status:
+            where_str = where_str + "m_status.value IS NOT NULL "
+        else:
+            where_str = where_str + "m_status.value IS NULL "    
+
+    results = connection.execute("SELECT m_status.value AS complete_date, " +
+            "m_comment AS comment, media_wf.name AS workflow_name, " +
+            "media_wf.id AS workflow_id, "
+            "mp2.value as description, media_property.value " +
+            "AS workflow_version, media.name AS name, media.id AS id, cv_term.name AS type, " + 
+            "media.create_date AS submit_date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
+            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
+            "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
+            "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + 
+            "JOIN media_property AS mp3 ON mp3.media_id = " +
+            "media.id JOIN cv_term AS cv_term4 ON cv_term4.id = mp3.type_id " + 
+            "JOIN media_relationship AS mr ON mr.object_id = media.id " +
+            "JOIN media AS media_wf ON media_wf.id = mr.subject_id " +
+            "JOIN cv_term AS cv_term5 ON cv_term5.id = mr.type_id " +
+            "LEFT JOIN media_property AS m_comment ON media.id = m_comment.media_id " +
+            "AND m_comment.type_id = " + str(comment_id) + " " + 
+            "LEFT JOIN media_property AS m_status ON media.id = m_status.media_id " +
+            "AND m_status.type_id = " + str(status_id) + " " + 
+            where_str + order_by + limit_str + ";")
 
 
     json_results = []
-
     for result in results:
         json_result = {}
+        json_result["workflow-name"] = result["workflow_name"]
+        json_result["workflow-id"] = result["workflow_id"]
         json_result["name"] = result["name"]
         json_result["id"] = result["id"]
-        json_result["date"] = str(result["date"])
-        json_result["description"] = result["description"]
-        json_result["workflow-type"] = result["workflow_type"]
+        json_result["submit-date"] = str(result["submit_date"])
         json_result["owner"] = owner
-        json_result["interface-version"] = result["interface_version"]
+        json_result["description"] = result["description"]
+        json_result["workflow-version"] = result["workflow_version"]
+        
+        
+        json_result["comment"] = result["comment"]
+        json_result["complete-date"] = result["complete_date"]
         json_results.append(json_result)
 
     json_data["results"] = json_results
