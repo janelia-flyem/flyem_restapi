@@ -1,0 +1,17 @@
+curl -X 'POST' -H "Content-type: application/json" -d '{"name": "mybounds.ilp", "description": "First boundary ilp added", "file-path": "/groups/flyem/data/stupid/mybounds.ilp"}' -u plazas:password 127.0.0.1:5000/media/boundary-ilp
+
+curl -X 'POST' -H "Content-type: application/json" -d '{"name": "second_flow",  "description": "my first workflow", "workflow-interface-version": "1.0"}' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/junk
+
+curl -X 'PUT' -H "Content-type: application/json" -d '{ "value": 3.0 }' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/457/parameters/seed-size
+
+curl -X 'POST' -H "Content-type: application/json" -d '{"parameters" : [ { "name" : "cc-size", "value": 2.0 }, { "name" : "use-neuroproof", "value" : "true" } ] }' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/457/parameters
+
+curl -X 'POST'  -H "Content-type: application/json" -d '{"media-inputs" : [429, 430]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/457/media-inputs
+
+curl -X 'POST'  -H "Content-type: application/json" -d '{"workflow-version": "1.0", "description" : "job one"}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/457/jobs
+
+curl -X 'PUT'  -H "Content-type: application/json" -d '{"value" : "This run is really bad"}'  -u plazas:password 127.0.0.1:5000/owners/plazas/jobs/468/comment
+
+curl -X 'POST'  -H "Content-type: application/json" -d '{"job-inputs" : [467, 468]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/jobs/467/job-inputs
+
+curl  -u plazas:password 127.0.0.1:5000/owners/plazas/jobs?comment=This\&is-complete=True
