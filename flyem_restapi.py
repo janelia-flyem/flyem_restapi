@@ -453,7 +453,6 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
     else:
         raise Exception("Not all parameters were specified")
 
-# ?!
 def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id=None):
     where_str = ''
     order_by = 'ORDER BY media.create_date DESC'
@@ -501,19 +500,20 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
         else:
             where_str = where_str + "m_status.value IS NULL "
 
-    status = request.args.get('is-completed')
+    status = request.args.get('is-complete')
     if status is not None:
         if where_str == '':
             where_str += " WHERE "
         else:
             where_str += " AND "    
-        if status:
+        status = status.lower()
+        if status == "true":
             where_str = where_str + "m_status.value IS NOT NULL "
         else:
             where_str = where_str + "m_status.value IS NULL "    
 
-    results = connection.execute("SELECT m_status.value AS complete_date, " +
-            "m_comment AS comment, media_wf.name AS workflow_name, " +
+    results = connection.execute("SELECT m_status.create_date AS complete_date, " +
+            "m_comment.value AS comment, media_wf.name AS workflow_name, " +
             "media_wf.id AS workflow_id, "
             "mp2.value as description, media_property.value " +
             "AS workflow_version, media.name AS name, media.id AS id, cv_term.name AS type, " + 
@@ -529,7 +529,7 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
             "LEFT JOIN media_property AS m_comment ON media.id = m_comment.media_id " +
             "AND m_comment.type_id = " + str(comment_id) + " " + 
             "LEFT JOIN media_property AS m_status ON media.id = m_status.media_id " +
-            "AND m_status.type_id = " + str(status_id) + " " + 
+            "AND m_status.type_id = " + str(completion_id) + " " + 
             where_str + order_by + limit_str + ";")
 
 
@@ -547,7 +547,7 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
         
         
         json_result["comment"] = result["comment"]
-        json_result["complete-date"] = result["complete_date"]
+        json_result["complete-date"] = str(result["complete_date"])
         json_results.append(json_result)
 
     json_data["results"] = json_results
