@@ -1,4 +1,4 @@
-from flyem_core import *
+from restful_core import *
 
 ### json outputs for HTTP requests will return a message in 'error' if an error occurs
 ### must specify username/password or uid/uidpassword created by a session
