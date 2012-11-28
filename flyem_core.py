@@ -232,7 +232,7 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
     workflow_interface = request.args.get('interface-version')
     where_str = where_builder(where_str, 'mp4.value', workflow_interface, '=')
 
-    results = connection.execute("SELECT mp4.value as interface_version, "
+    results = connection.execute("SELECT SQL_CALC_FOUND_ROWS  mp4.value as interface_version, "
             "mp2.value as description, media_property.value " +
             "AS workflow_type, media.name AS name, media.id AS id, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
@@ -246,6 +246,9 @@ def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1,
             where_str + order_by + limit_str + ";")
 
     json_results = []
+
+    num_matches = connection.execute("SELECT found_rows();")
+    json_data["num-matches"] = num_matches.first()[0]
 
     for result in results:
         json_result = {}
@@ -398,14 +401,17 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
     where_str = where_builder(where_str, 'cv_term2.name', "file_system_path")
     where_str = where_builder(where_str, 'cv_term3.name', "description")
     
-    results = connection.execute("SELECT mp2.value as description, media_property.value " +
+    results = connection.execute("SELECT SQL_CALC_FOUND_ROWS mp2.value as description, media_property.value " +
             "AS file_system_path, media.name AS name, media.id AS mid, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
             "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
             "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
             "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + where_str +
             order_by + limit_str + ";")
-
+    
+    num_matches = connection.execute("SELECT found_rows();")
+    json_data["num-matches"] = num_matches.first()[0]
+    
     json_results = []
 
     for result in results:
@@ -512,7 +518,7 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
         else:
             where_str = where_str + "m_status.value IS NULL "    
 
-    results = connection.execute("SELECT m_status.create_date AS complete_date, " +
+    results = connection.execute("SELECT SQL_CALC_FOUND_ROWS  m_status.create_date AS complete_date, " +
             "m_comment.value AS comment, media_wf.name AS workflow_name, " +
             "media_wf.id AS workflow_id, "
             "mp2.value as description, media_property.value " +
@@ -532,6 +538,8 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
             "AND m_status.type_id = " + str(completion_id) + " " + 
             where_str + order_by + limit_str + ";")
 
+    num_matches = connection.execute("SELECT found_rows();")
+    json_data["num-matches"] = num_matches.first()[0]
 
     json_results = []
     for result in results:

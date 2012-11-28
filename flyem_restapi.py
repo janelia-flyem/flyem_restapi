@@ -11,7 +11,7 @@ from flyem_core import *
 ### Media GET ###
 # url input: media type=none, id=none
 # url query string: name, description, file-path, media-type 
-# json_output: results = {name/id, date, media_type_name, description, file-path, num-matches}
+# json_output: results = [ {name/id, date, media_type_name, description, file-path}, ... ], num-matches
 @app.route("/media", methods=['GET'])
 @app.route("/media/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/media/<mtype>", methods=['POST'])
@@ -33,7 +33,7 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
 ### Workflow GET ###
 # url input: /<owner/workflows/<workflow_type=None>/<workflow_id=None>/<position1 - position2>
 # url query string: name, workflow-type, description, interface-version
-# json output: results = {name, id, date, description, workflow-type, owner, interface-version, num-matches} 
+# json output: results = [ {name, id, date, description, workflow-type, owner, interface-version}, ... ], num-matches 
 @app.route("/owners/<owner>/workflows", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
@@ -125,8 +125,8 @@ def workflow_workflow(username, owner, workflow_id, wid=None):
 ### Job GET ###
 # url input: <owner>
 # url query string: name, workflow-version, description, workflow-name, comment, is-complete 
-# json output: results = [ workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
-# comment, complete-date, num-matches ]
+# json output: results = [ {workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
+# comment, complete-date}, ... ], num-matches
 @app.route("/owners/<owner>/jobs", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/jobs/<int:job_id>", methods=['GET'])
@@ -140,8 +140,8 @@ def jobs_basic(username, owner, pos1=None, pos2=None, job_id=None):
 ### Job GET ###
 # url input: <owner>/jobs/completed
 # url query string: name, workflow-version, description, workflow-name, comment, is-complete 
-# json output: results = [ workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
-# comment, complete-date, num-matches ]
+# json output: results = [ {workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
+# comment, complete-date}, ...], num-matches
 @app.route("/owners/<owner>/jobs/completed", methods=['GET'])
 @app.route("/owners/<owner>/jobs/completed/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/jobs/completed/<int:job_id>", methods=['PUT'])
@@ -158,8 +158,8 @@ def jobs_completed(username, owner, pos1=None, pos2=None, job_id = None):
 ### Job GET ###
 # url input: <owner>/jobs/notcompleted
 # url query string: name, workflow-version, description, workflow-name, comment, is-complete 
-# json output: results = [ workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
-# comment, complete-date, num-matches ]
+# json output: results = [ {workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
+# comment, complete-date}, ...], num-matches
 @app.route("/owners/<owner>/jobs/notcompleted", methods=['GET'])
 @app.route("/owners/<owner>/jobs/notcompleted/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
@@ -175,8 +175,8 @@ def jobs_notcompleted(username, owner, pos1=None, pos2=None):
 ### Job GET ###
 # url input: <owner>/workflows/<workflow id>
 # url query string: name, workflow-version, description, workflow-name, comment, is-complete 
-# json output: results = [ workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
-# comment, complete-date, num-matches ]
+# json output: results = [ {workflow-name, workflow-id, name, id, submit-date, owner, description, workflow-version,
+# comment, complete-date}, ...], num-matches
 @app.route("/owners/<owner>/workflows/<workflow_id>/jobs", methods=['POST', 'GET']) # show comments
 @app.route("/owners/<owner>/workflows/<workflow_id>/jobs/<int:pos1>-<int:pos2>", methods=['GET']) # show comments
 @verify_login
