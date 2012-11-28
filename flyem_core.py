@@ -425,7 +425,7 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
     workflow_version = json_data["workflow-version"]
     description = json_data["description"]
     json_data["workflow-id"] = workflow_id
-    json_data["workflow-job-complete"] = 0
+    json_data["is-complete"] = "false"
 
     if description is not None and workflow_version is not None:
         num_jobs_res = connection.execute('SELECT cv_term.id from media_relationship JOIN cv_term ON ' +
