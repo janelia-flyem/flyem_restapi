@@ -270,6 +270,14 @@ def create_param_type_id(name, connection):
             'VALUES(' + str(cv_id) + ', "' + name + '", "Parameter used in one of the workflows", 1, ' +
             '"' + name + '", "text");')
 
+def create_media_input_type_id(name, connection):
+    cv_id_res = connection.execute('SELECT id FROM cv WHERE name = "media_workflow_relationships"')
+    cv_id = cv_id_res.first()["id"]
+    connection.execute('INSERT IGNORE INTO cv_term(cv_id, name, definition, is_current, display_name, data_type) ' +
+            'VALUES(' + str(cv_id) + ', "' + name + '", "Media input type to workflow", 1, ' +
+            '"' + name + '", "text");')
+
+
 
 def workflow_param_post(json_data, connection, workflow_id):
     for param in json_data["parameters"]:
@@ -331,24 +339,26 @@ def workflow_workflow_get(json_data, connection, workflow_id):
     json_data["workflow-inputs"] = workflow_inputs 
 
 def workflow_media_post(json_data, connection, workflow_id):
-    for mid in json_data["media-inputs"]:
-        insert_relationship(mid, workflow_id, "media_to_workflow", connection)    
+    for entry in json_data["media-inputs"]:
+        create_media_input_type_id(entry["name"], connection)
+        insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
     
-def workflow_media_put(json_data, connection, workflow_id, mid):
-    insert_relationship(mid, workflow_id, "media_to_workflow", connection)    
+def workflow_media_put(json_data, connection, workflow_id, input_name, mid):
+    create_media_input_type_id(input_name, connection)
+    insert_relationship(mid, workflow_id, input_name, connection)    
 
 def workflow_media_get(json_data, connection, workflow_id):
     where_str = ''
     where_str = where_builder(where_str, "media_relationship.object_id", str(workflow_id), '=')
-    where_str = where_builder(where_str, "cv_term.name", "media_to_workflow", '=')
+    where_str = where_builder(where_str, "cv.name", "media_workflow_relationships", '=')
     
-    results = connection.execute("SELECT media_relationship.subject_id AS parent FROM "
-            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id "
-            + where_str)
+    results = connection.execute("SELECT media_relationship.subject_id AS parent, cv_term.name AS type FROM "
+            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id JOIN cv ON cv.id = "
+            + "cv_term.cv_id " + where_str)
 
     media_inputs = []
     for result in results:
-        media_inputs.append(result["parent"])
+        media_inputs.append({ "name" : result["type"], "id" : result["parent"] })
 
     json_data["media-inputs"] = media_inputs 
 

@@ -76,16 +76,16 @@ def workflow_params(username, owner, workflow_id, parameter=None):
 
 ### Workflow media inputs POST ###
 # url input: <owner>/workflows/<workflow_id>
-# json input: media-inputs [ id1, id2, ... ]
+# json input: media-inputs [ { "name" : <name>, "id" : <id> }, ... ]
 ### Workflow media inputs PUT ###
-# url input: <owner>/workflows/<workflow id>/media-inputs/<media id>
+# url input: <owner>/workflows/<workflow id>/media-inputs/<input name>/<media id>
 ### Workflow media inputs GET ###
 # url input: /<owner>/workflows/<workflow id>
-# json output: media-inputs = [ id1, id2, ... ]
+# json output: media-inputs [ { "name" : <name>, "id" : <id> }, ... ]
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<int:mid>", methods=['PUT'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<input_name>/<int:mid>", methods=['PUT'])
 @verify_login
-def workflow_media(username, owner, workflow_id, mid=None):
+def workflow_media(username, owner, workflow_id, input_name=None, mid=None):
     if request.method == 'POST':
         if owner != username:
             abort(401)
@@ -93,7 +93,7 @@ def workflow_media(username, owner, workflow_id, mid=None):
     elif request.method == 'PUT':
         if owner != username:
             abort(401)
-        return query_handler(workflow_media_put, workflow_id, mid)
+        return query_handler(workflow_media_put, workflow_id, input_name, mid)
     else:
         return query_handler(workflow_media_get, workflow_id)     
 
