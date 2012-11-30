@@ -203,12 +203,13 @@ def workflow_post(json_data, connection, owner, workflow_type):
     else:
         raise Exception("Not all parameters were specified")
 
-def workflow_get(json_data, connection, owner, workflow_type, workflow_id, pos1, pos2):
+def workflow_get(json_data, connection, owner, workflow_type, pos1, pos2):
     where_str = ''
     order_by = 'ORDER BY media.create_date DESC'
 
     limit_str = limit_builder(pos1, pos2)
     
+    workflow_id = request.args.get('workflow-id')
     where_str = where_builder(where_str, "media.id", workflow_id, '=')
 
     name = request.args.get('name')

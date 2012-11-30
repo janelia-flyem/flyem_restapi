@@ -31,22 +31,21 @@ def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
 # json input: name, description, workflow-interface-version
 # json output: workflow-id 
 ### Workflow GET ###
-# url input: /<owner/workflows/<workflow_type=None>/<workflow_id=None>/<position1 - position2>
-# url query string: name, workflow-type, description, interface-version
+# url input: /<owner/workflows/<workflow_type=None>/<position1 - position2>
+# url query string: name, workflow-type, workflow-id, description, interface-version
 # json output: results = [ {name, id, date, description, workflow-type, owner, interface-version}, ... ], num-matches 
 @app.route("/owners/<owner>/workflows", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<int:pos1>-<int:pos2>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<workflow_type>/<int:workflow_id>", methods=['GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
-def workflow_type(username, owner, workflow_type=None, workflow_id=None, pos1=None, pos2=None):
+def workflow_type(username, owner, workflow_type=None, pos1=None, pos2=None):
     if request.method == 'POST':
         if owner != username:
             abort(401)
         return query_handler(workflow_post, owner, workflow_type)
     else:
-        return query_handler(workflow_get, owner, workflow_type, workflow_id, pos1, pos2)
+        return query_handler(workflow_get, owner, workflow_type, pos1, pos2)
 
 
 ### Workflow parameter POST ###
