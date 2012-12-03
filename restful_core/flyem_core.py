@@ -18,6 +18,7 @@ media_type = {}
 media_type["substack"] = "substack"
 media_type["tbar-ilp"] = "tbar_ilp"
 media_type["boundary-ilp"] = "boundary_ilp"
+media_type["boundary-h5"] = "boundary_h5"
 media_type["segmentation-substack"] = "segmentation_substack"
 media_type["groundtruth-substack"] = "groundtruth_substack"
 rmedia_type = dict((reversed(item) for item in media_type.items()))
