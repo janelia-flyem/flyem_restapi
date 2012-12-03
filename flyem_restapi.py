@@ -17,13 +17,12 @@ from restful_core import *
 @app.route("/media/<mtype>", methods=['POST'])
 @app.route("/media/<mtype>", methods=['GET'])
 @app.route("/media/<mtype>/<int:pos1>-<int:pos2>", methods=['GET'])
-@app.route("/media/<mtype>/<int:mid>", methods=['GET'])
 @verify_login
-def media_route(username, mtype=None, mid=None, pos1=None, pos2=None):
+def media_route(username, mtype=None, pos1=None, pos2=None):
     if request.method == 'POST':
         return query_handler(media_post, mtype)
     elif request.method == 'GET':
-        return query_handler(media_get, mtype, mid, pos1, pos2)
+        return query_handler(media_get, mtype, pos1, pos2)
 
 
 ### Workflow POST ###

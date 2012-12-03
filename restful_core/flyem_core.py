@@ -384,7 +384,7 @@ def media_post(json_data, connection, mtype):
 
 
 # only grab media with a file path (description is still optional)
-def media_get(json_data, connection, mtype, mid, pos1, pos2):
+def media_get(json_data, connection, mtype, pos1, pos2):
     where_str = ''
     limit_str = ''
     order_by = 'ORDER BY media.create_date DESC'
@@ -393,7 +393,9 @@ def media_get(json_data, connection, mtype, mid, pos1, pos2):
     if mtype is not None:
         mtype = media_type[mtype]
         where_str = where_builder(where_str, "cv_term.name", mtype, '=')
-        where_str = where_builder(where_str, "media.id", str(mid), '=')
+    
+    mid = request.args.get('media-id')
+    where_str = where_builder(where_str, "media.id", str(mid), '=')
 
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
