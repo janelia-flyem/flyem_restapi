@@ -27,7 +27,24 @@ curl -X 'POST' -H "Content-type: application/json" -d '{"parameters" : [ { "name
 
 curl -X 'POST' -H "Content-type: application/json" -d '{"name": "tinyravgt", "description": "Raveler groundtruth for tinyfib", "file-path": "/home/plazas/tinyfib/raveler-groundtruth"}' -u plazas:password 127.0.0.1:5000/media/groundtruth-substack
 curl -X 'POST' -H "Content-type: application/json" -d '{"name": "tinyh5", "description": "h5 for tiny fib", "file-path": "/home/plazas/ray/ray/testdata/pixelprobs.h5"}' -u plazas:password 127.0.0.1:5000/media/boundary-h5
+curl -X 'POST' -H "Content-type: application/json" -d '{"name": "firstilp", "description": "ilp for tiny fib", "file-path": "/home/plazas/ray/ray/testdata/boundclassifier.ilp"}' -u plazas:password 127.0.0.1:5000/media/boundary-ilp
 
-curl -X 'POST'  -H "Content-type: application/json" -d '{"media-inputs" : [{"name" : "raveler-groundtruth", "id" : 470}, {"name" : "boundary-prediction", "id" : 471 }]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/media-inputs
+
+curl -X 'POST'  -H "Content-type: application/json" -d '{"media-inputs" : [{"name" : "raveler-groundtruth", "id" : 470}, {"name" : "boundary-prediction", "id" : 471 }, {"name" : "boundary-classifier", "id" : 495}]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/media-inputs
+
+
+# add segmentation workflow
+
+ curl -X 'POST' -H "Content-type: application/json" -d '{"name": "gala_segmentation_flow",  "description": "my first segmentation flow", "workflow-interface-version": "1.0"}' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/gala-segmentation-pipeline
+curl -X 'POST' -H "Content-type: application/json" -d '{"parameters" : [ {"name" : "border-size", "value" : 10}, {"name" : "synapse-dilation", "value" : 1 }, { "name" : "boundary-channels", "value": 0 }, { "name" : "segmentation-thresholds", "value" : "0.1 0.2" } ] }' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/496/parameters
+
+
+ curl -X 'POST' -H "Content-type: application/json" -d '{"name": "synapse json file", "description": "synapse json", "file-path": "/home/plazas/ray/ray/testdata/annotations-synapse.json"}' -u plazas:password 127.0.0.1:5000/media/synapse-json
+curl -X 'POST' -H "Content-type: application/json" -d '{"name": "start_stack", "description": "substack", "file-path": "/home/plazas/ray/ray/testdata/original_grayscales"}' -u plazas:password 127.0.0.1:5000/media/substack
+
+
+curl -X 'POST'  -H "Content-type: application/json" -d '{"media-inputs" : [{"name" : "image-stack", "id" : 498}, {"name" : "synapse-file", "id" : 497}]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/496/media-inputs
+curl -X 'POST'  -H "Content-type: application/json" -d '{"workflow-inputs" : [ {"name" : "workflow1", "id" : 469}]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/496/workflow-inputs
+
 
 

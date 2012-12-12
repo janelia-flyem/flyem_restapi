@@ -98,14 +98,14 @@ def workflow_media(username, owner, workflow_id, input_name=None, mid=None):
 
 ### Workflow workflow inputs POST ###
 # url input: <owner>/workflows/<workflow_id>
-# json input: workflow-inputs [ id1, id2, ... ]
+# json input: workflow-inputs [ {"name" : <name>, "id" : <id> }, ... ]
 ### Workflow workflow inputs PUT ###
-# url input: <owner>/workflows/<workflow id>/workflow-inputs/<workflow id>
+# url input: <owner>/workflows/<workflow id>/workflow-inputs/<input name>/<workflow id>
 ### Workflow workflow inputs GET ###
 # url input: /<owner>/workflows/<workflow id>
-# json output: workflow-inputs = [ id1, id2, ... ]
+# json output: workflow-inputs [ { "name" : <name>, "id" : <id> }, ... ]
 @app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<int:wid>", methods=['PUT'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<input_name>/<int:wid>", methods=['PUT'])
 @verify_login
 def workflow_workflow(username, owner, workflow_id, wid=None):
     if request.method == 'POST':
@@ -115,7 +115,7 @@ def workflow_workflow(username, owner, workflow_id, wid=None):
     elif request.method == 'PUT':
         if owner != username:
             abort(401)
-        return query_handler(workflow_workflow_put, workflow_id, wid)
+        return query_handler(workflow_workflow_put, workflow_id, input_name, wid)
     else:
         return query_handler(workflow_workflow_get, workflow_id)     
 
@@ -184,7 +184,7 @@ def workflow_jobs(username, owner, workflow_id, pos1=None, pos2=None):
             abort(401)
         return query_handler(workflow_jobs_post, owner, workflow_id)
     else:
-        return query_handler(job_query_get, None, workflow_id, pos1, pos2)
+        return query_handler(job_query_get, owner, None, workflow_id, pos1, pos2)
 
 
 ### Job Put (will overwrite comment from before if it already exists) ###

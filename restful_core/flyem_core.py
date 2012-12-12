@@ -21,6 +21,7 @@ media_type["boundary-ilp"] = "boundary_ilp"
 media_type["boundary-h5"] = "boundary_h5"
 media_type["segmentation-substack"] = "segmentation_substack"
 media_type["groundtruth-substack"] = "groundtruth_substack"
+media_type["synapse-json"] = "synapse_json"
 rmedia_type = dict((reversed(item) for item in media_type.items()))
 
 
@@ -318,25 +319,35 @@ def insert_relationship(parent, child, type_name, connection):
     connection.execute("INSERT INTO media_relationship(type_id, subject_id, object_id, is_current) " +
             "VALUES(" + str(type_id) + ", " + str(parent) + ", " + str(child) + ", 1)")
 
-def workflow_workflow_post(json_data, connection, workflow_id):
-    for mid in json_data["workflow-inputs"]:
-        insert_relationship(mid, workflow_id, "workflow_to_workflow", connection)    
     
-def workflow_workflow_put(json_data, connection, workflow_id, wid):
-    insert_relationship(wid, workflow_id, "workflow_to_workflow", connection)    
+def create_workflow_input_type_id(name, connection):
+    cv_id_res = connection.execute('SELECT id FROM cv WHERE name = "workflow_workflow_relationships"')
+    cv_id = cv_id_res.first()["id"]
+    connection.execute('INSERT IGNORE INTO cv_term(cv_id, name, definition, is_current, display_name, data_type) ' +
+            'VALUES(' + str(cv_id) + ', "' + name + '", "Workflow input type to workflow", 1, ' +
+            '"' + name + '", "text");')
+
+def workflow_workflow_post(json_data, connection, workflow_id):
+    for entry in json_data["workflow-inputs"]:
+        create_workflow_input_type_id(entry["name"], connection)
+        insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
+ 
+def workflow_workflow_put(json_data, connection, workflow_id, input_name, wid):
+    create_workflow_input_type_id(input_name, connection)
+    insert_relationship(wid, workflow_id, input_name, connection)    
 
 def workflow_workflow_get(json_data, connection, workflow_id):
     where_str = ''
     where_str = where_builder(where_str, "media_relationship.object_id", str(workflow_id), '=')
-    where_str = where_builder(where_str, "cv_term.name", "workflow_to_workflow", '=')
+    where_str = where_builder(where_str, "cv.name", "workflow_workflow_relationships", '=')
     
-    results = connection.execute("SELECT media_relationship.subject_id AS parent FROM "
-            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id "
-            + where_str)
+    results = connection.execute("SELECT media_relationship.subject_id AS parent, cv_term.name AS type FROM "
+            + "media_relationship JOIN cv_term ON cv_term.id = media_relationship.type_id JOIN cv ON cv.id = "
+            + "cv_term.cv_id " + where_str)
 
     workflow_inputs = []
     for result in results:
-        workflow_inputs.append(result["parent"])
+        workflow_inputs.append({ "name" : result["type"], "id" : result["parent"] })
 
     json_data["workflow-inputs"] = workflow_inputs 
 
@@ -503,6 +514,10 @@ def job_query_get(json_data, connection, owner, complete_status, workflow_id, po
     where_str = where_builder(where_str, "cv_term5.name", "workflow_to_workflow_job", '=')
     workflow_name = request.args.get('workflow-name')
     where_str = where_builder(where_str, "media_wf.name", workflow_name)
+
+    if workflow_id is None:
+        workflow_id = request.args.get('workflow-id')
+        
     where_str = where_builder(where_str, "media_wf.id", workflow_id)
     
 
