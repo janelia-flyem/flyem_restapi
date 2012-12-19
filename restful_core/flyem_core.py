@@ -338,7 +338,7 @@ def workflow_workflow_put(json_data, connection, workflow_id, input_name, wid):
 
 def workflow_workflow_get(json_data, connection, workflow_id):
     where_str = ''
-    where_str = where_builder(where_str, "media_relationship.object_id", str(workflow_id), '=')
+    where_str = where_builder(where_str, "media_relationship.object_id", workflow_id, '=')
     where_str = where_builder(where_str, "cv.name", "workflow_workflow_relationships", '=')
     
     results = connection.execute("SELECT media_relationship.subject_id AS parent, cv_term.name AS type FROM "
@@ -362,7 +362,7 @@ def workflow_media_put(json_data, connection, workflow_id, input_name, mid):
 
 def workflow_media_get(json_data, connection, workflow_id):
     where_str = ''
-    where_str = where_builder(where_str, "media_relationship.object_id", str(workflow_id), '=')
+    where_str = where_builder(where_str, "media_relationship.object_id", workflow_id, '=')
     where_str = where_builder(where_str, "cv.name", "media_workflow_relationships", '=')
     
     results = connection.execute("SELECT media_relationship.subject_id AS parent, cv_term.name AS type FROM "
@@ -407,7 +407,7 @@ def media_get(json_data, connection, mtype, pos1, pos2):
         where_str = where_builder(where_str, "cv_term.name", mtype, '=')
     
     mid = request.args.get('media-id')
-    where_str = where_builder(where_str, "media.id", str(mid), '=')
+    where_str = where_builder(where_str, "media.id", mid, '=')
 
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
@@ -423,9 +423,9 @@ def media_get(json_data, connection, mtype, pos1, pos2):
         media_type_t = media_type[media_type_t]
     where_str = where_builder(where_str, 'cv_term.name', media_type_t)
 
-    where_str = where_builder(where_str, 'cv_term2.name', "file_system_path")
-    where_str = where_builder(where_str, 'cv_term3.name', "description")
-    
+    where_str = where_builder(where_str, 'cv_term2.name', "file_system_path", '=')
+    where_str = where_builder(where_str, 'cv_term3.name', "description", '=')
+   
     results = connection.execute("SELECT SQL_CALC_FOUND_ROWS mp2.value as description, media_property.value " +
             "AS file_system_path, media.name AS name, media.id AS mid, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
@@ -604,7 +604,7 @@ def workflow_job_comment_put(json_data, connection, owner, job_id):
 
 def workflow_job_comment_get(json_data, connection, job_id):
     where_str = ''
-    where_str = where_builder(where_str, "media_property.media_id", str(job_id), '=')
+    where_str = where_builder(where_str, "media_property.media_id", job_id, '=')
     where_str = where_builder(where_str, "cv_term.name", "comment", '=')
    
     results = connection.execute("SELECT media_property.value AS value FROM "
@@ -622,7 +622,7 @@ def job_job_put(json_data, connection, job_id, parent_id):
 
 def job_job_get(json_data, connection, job_id):
     where_str = ''
-    where_str = where_builder(where_str, "media_relationship.object_id", str(job_id), '=')
+    where_str = where_builder(where_str, "media_relationship.object_id", job_id, '=')
     where_str = where_builder(where_str, "cv_term.name", "workflow_job_to_workflow_job", '=')
     
     results = connection.execute("SELECT media_relationship.subject_id AS parent FROM "
