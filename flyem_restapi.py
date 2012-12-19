@@ -4,46 +4,48 @@ from restful_core import *
 ### must specify username/password or uid/uidpassword created by a session
 
 
-## !! fix interface bugs (post/get/etc)
+
+## ?! grab only media with a certain cv (media_training), search for media types just with this media training name
 
 
 ## ?! merge workflow and job put/post into one call
 ## ?! protect alter comment command
-## ?! UPDATE DB WITH MEDIA TRAINING -- CONVERT PAST ONES TO MEDIA TRAINING CV FROM MEDIA
-## ?! grab only media with a certain cv (media_training), search for media types just with this media training name
+
 ## ?! REMOVE WORKFOW TYPE FROM MEDIA PROPERTY
 ## ?! create workflow types dynamically and fold into media table
+
+
+
 ## ?! highlight weak parts of code/unfinished parts of code in a README
 ## ?! test both job submissions
-## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan
+## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan (need owner and non-unique)
 ## ?! copy git repo to flyem
 ## ?! present stuff sometime on Thursday
 
+## ?? how to do regular expressions on routes
 
 
-### Media GET ###
-# url input: media type=none, id=none
-# url query string: name, description, file-path, media-type 
-# json_output: results = [ {name/id, date, media_type_name, description, file-path}, ... ], num-matches
-@app.route("/media", methods=['GET'])
-@app.route("/media/<int:pos1>-<int:pos2>", methods=['GET'])
-@app.route("/media/<mtype>", methods=['GET'])
-@app.route("/media/<mtype>/<int:pos1>-<int:pos2>", methods=['GET'])
-@verify_login
-def media_get_route(username, mtype=None, pos1=None, pos2=None):
-    return query_handler(media_get, mtype, pos1, pos2)
+
 
 
 ### Media POST ###
 # url input: /<media type> (groundtruth_substack, substack, tbar_detect_ilp, boundary_ilp
 # json input: name, description, file-path
 # json ouptut: media-id
-@app.route("/media/<mtype>", methods=['POST'])
+### Media GET ###
+# url input: media type=none, id=none
+# url query string: name, description, file-path, media-type 
+# json_output: results = [ {name/id, date, media_type_name, description, file-path}, ... ], num-matches
+@app.route("/media", methods=['GET'])
+@app.route("/media/<int:pos1>-<int:pos2>", methods=['GET'])
+@app.route("/media/<mtype>", methods=['POST', 'GET'])
+@app.route("/media/<mtype>/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
-def media_post_route(username, mtype):
-    return query_handler(media_post, mtype)
-
-
+def media_route(username, mtype=None, pos1=None, pos2=None):
+    if request.method == 'POST':
+        return query_handler(media_post, mtype)
+    else: 
+        return query_handler(media_get, mtype, pos1, pos2)
 
 
 
