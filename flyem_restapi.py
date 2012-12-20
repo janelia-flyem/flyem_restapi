@@ -5,7 +5,6 @@ from restful_core import *
 
 
 
-## ?! merge job put/post into one call
 ## ?! protect alter comment command
 
 
@@ -27,9 +26,11 @@ from restful_core import *
 ## ?! copy git repo to flyem
 ## ?! present stuff sometime on Thursday
 
+
+
 ## ?? how to do regular expressions on routes
 ## ?? occassional crashes -- why??
-
+## ?! make an admin mode for submitting job completion status
 
 
 
@@ -154,7 +155,7 @@ def jobs_notcompleted(username, owner, pos1=None, pos2=None):
 # job number will be name of workflow with the number of jobs for that workflow
 ### Job POST ###
 # url input: <owner>/workflows/<workflow id>
-# json input: workflow-version, description
+# json input: workflow-version, description, job-inputs [ id1, id2, ... ]
 # json output: job-name, job-id, job-start-time, is-complete 
 ### Job GET ###
 # url input: <owner>/workflows/<workflow id>
@@ -190,28 +191,13 @@ def workflow_job_comment(username, owner, job_id):
         return query_handler(workflow_job_comment_get, job_id)
 
 
-### Job inputs POST ###
-# url input: <owner>/jobs/<job id>
-# json input: job-inputs [ id1, id2, ... ]
-### Job inputs PUT ###
-# url input: <owner>/jobs/<job id>/job-inputs/<job input id>
 ### Job inputs GET ###
 # url input: <owner>/jobs/<job id>
 # json output: job-inputs = [ id1, id2, ... ]
-@app.route("/owners/<owner>/jobs/<job_id>/job-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/jobs/<job_id>/job-inputs/<par_id>", methods=['PUT'])
+@app.route("/owners/<owner>/jobs/<job_id>/job-inputs", methods=['GET'])
 @verify_login
 def job_job(username, owner, job_id, par_id=None):
-    if request.method == 'POST':
-        if owner != username:
-            abort(401)
-        return query_handler(job_job_post, job_id)
-    elif request.method == 'PUT':
-        if owner != username:
-            abort(401)
-        return query_handler(job_job_put, job_id, par_id)
-    else:
-        return query_handler(job_job_get, job_id)     
+    return query_handler(job_job_get, job_id)     
 
 
 ### session user POST ###

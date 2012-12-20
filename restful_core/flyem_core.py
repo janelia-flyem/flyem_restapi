@@ -484,6 +484,8 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
     else:
         raise Exception("Not all parameters were specified")
 
+    job_job_post(json_data, connection, media_id):
+
 def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id=None):
     where_str = ''
     order_by = 'ORDER BY media.create_date DESC'
@@ -614,12 +616,10 @@ def workflow_job_comment_get(json_data, connection, job_id):
 
 
 def job_job_post(json_data, connection, job_id):
-    for parent_id in json_data["job-inputs"]:
-        insert_relationship(parent_id, job_id, "workflow_job_to_workflow_job", connection)    
+    if "job-inputs" in json_data:
+        for parent_id in json_data["job-inputs"]:
+            insert_relationship(parent_id, job_id, "workflow_job_to_workflow_job", connection)    
     
-def job_job_put(json_data, connection, job_id, parent_id):
-    insert_relationship(parent_id, job_id, "workflow_job_to_workflow_job", connection)    
-
 def job_job_get(json_data, connection, job_id):
     where_str = ''
     where_str = where_builder(where_str, "media_relationship.object_id", job_id, '=')
