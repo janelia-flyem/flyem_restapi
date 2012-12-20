@@ -6,17 +6,6 @@ from restful_core import *
 
 
 
-## ?! test both job submissions
-
-
-
-## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan (need owner and non-unique), put on wiki
-## ?! highlight weak parts of code/unfinished parts of code in a wiki
-
-
-
-
-
 ## ?! copy git repo to flyem
 ## ?! present stuff sometime on Thursday
 
