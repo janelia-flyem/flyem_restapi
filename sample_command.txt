@@ -22,15 +22,20 @@ curl  -u plazas:password 127.0.0.1:5000/owners/plazas/jobs?comment=This\&is-comp
 
 
 
-curl -X 'POST' -H "Content-type: application/json" -d '{"name": "gala_training_flow",  "description": "my first training flow", "workflow-interface-version": "1.0"}' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/gala-train
-curl -X 'POST' -H "Content-type: application/json" -d '{"parameters" : [ { "name" : "seed-threshold", "value": 3 }, { "name" : "use-neuroproof", "value" : "--use-neuroproof" } ] }' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/parameters
+curl -X 'POST' -H "Content-type: application/json" -d '{"name": "gala_training_flow",  "description": "my first training flow", "workflow-interface-version": "1.0", "parameters" : [ { "name" : "seed-threshold", "value": 3 }, { "name" : "use-neuroproof", "value" : "--use-neuroproof" } ], "media-inputs" : [{"name" : "raveler-groundtruth", "id" : 470}, {"name" : "boundary-prediction", "id" : 471 }, {"name" : "boundary-classifier", "id" : 495}]}' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/gala-train
+
+
+curl -X 'POST' -H "Content-type: application/json" -d '{ }' -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/parameters
 
 curl -X 'POST' -H "Content-type: application/json" -d '{"name": "tinyravgt", "description": "Raveler groundtruth for tinyfib", "file-path": "/home/plazas/tinyfib/raveler-groundtruth"}' -u plazas:password 127.0.0.1:5000/media/groundtruth-substack
 curl -X 'POST' -H "Content-type: application/json" -d '{"name": "tinyh5", "description": "h5 for tiny fib", "file-path": "/home/plazas/ray/ray/testdata/pixelprobs.h5"}' -u plazas:password 127.0.0.1:5000/media/boundary-h5
 curl -X 'POST' -H "Content-type: application/json" -d '{"name": "firstilp", "description": "ilp for tiny fib", "file-path": "/home/plazas/ray/ray/testdata/boundclassifier.ilp"}' -u plazas:password 127.0.0.1:5000/media/boundary-ilp
 
 
-curl -X 'POST'  -H "Content-type: application/json" -d '{"media-inputs" : [{"name" : "raveler-groundtruth", "id" : 470}, {"name" : "boundary-prediction", "id" : 471 }, {"name" : "boundary-classifier", "id" : 495}]}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/media-inputs
+curl -X 'POST'  -H "Content-type: application/json" -d '{}'  -u plazas:password 127.0.0.1:5000/owners/plazas/workflows/469/media-inputs
+
+
+
 
 
 # add segmentation workflow

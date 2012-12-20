@@ -204,6 +204,11 @@ def workflow_post(json_data, connection, owner, workflow_type):
         set_media_property(media_id, "workflow_interface_version", workflow_interface, connection)
     else:
         raise Exception("Not all parameters were specified")
+   
+    workflow_param_post(json_data, connection, media_id) 
+    workflow_media_post(json_data, connection, media_id) 
+    workflow_workflow_post(json_data, connection, media_id)
+
 
 def workflow_get(json_data, connection, owner, workflow_type, pos1, pos2):
     where_str = ''
@@ -283,16 +288,14 @@ def create_media_input_type_id(name, connection):
 
 
 def workflow_param_post(json_data, connection, workflow_id):
-    for param in json_data["parameters"]:
-        create_param_type_id(param["name"], connection)
-        set_media_property(workflow_id, str(param["name"]), str(param["value"]), connection, 'workflow_parameters')
+    if "parameters" in json_data:
+        for param in json_data["parameters"]:
+            create_param_type_id(param["name"], connection)
+            set_media_property(workflow_id, str(param["name"]), str(param["value"]), connection, 'workflow_parameters')
 
 
     
    
-def workflow_param_put(json_data, connection, workflow_id, parameter):
-    create_param_type_id(parameter, connection)
-    set_media_property(workflow_id, parameter, str(json_data["value"]), connection)
 
 
 def workflow_param_get(json_data, connection, workflow_id, parameter):
@@ -328,14 +331,11 @@ def create_workflow_input_type_id(name, connection):
             '"' + name + '", "text");')
 
 def workflow_workflow_post(json_data, connection, workflow_id):
-    for entry in json_data["workflow-inputs"]:
-        create_workflow_input_type_id(entry["name"], connection)
-        insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
+    if "workflow-inputs" in json_data:
+        for entry in json_data["workflow-inputs"]:
+            create_workflow_input_type_id(entry["name"], connection)
+            insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
  
-def workflow_workflow_put(json_data, connection, workflow_id, input_name, wid):
-    create_workflow_input_type_id(input_name, connection)
-    insert_relationship(wid, workflow_id, input_name, connection)    
-
 def workflow_workflow_get(json_data, connection, workflow_id):
     where_str = ''
     where_str = where_builder(where_str, "media_relationship.object_id", workflow_id, '=')
@@ -352,14 +352,11 @@ def workflow_workflow_get(json_data, connection, workflow_id):
     json_data["workflow-inputs"] = workflow_inputs 
 
 def workflow_media_post(json_data, connection, workflow_id):
-    for entry in json_data["media-inputs"]:
-        create_media_input_type_id(entry["name"], connection)
-        insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
+    if "media-inputs" in json_data:
+        for entry in json_data["media-inputs"]:
+            create_media_input_type_id(entry["name"], connection)
+            insert_relationship(entry["id"], workflow_id, entry["name"], connection)    
     
-def workflow_media_put(json_data, connection, workflow_id, input_name, mid):
-    create_media_input_type_id(input_name, connection)
-    insert_relationship(mid, workflow_id, input_name, connection)    
-
 def workflow_media_get(json_data, connection, workflow_id):
     where_str = ''
     where_str = where_builder(where_str, "media_relationship.object_id", workflow_id, '=')

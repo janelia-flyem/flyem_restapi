@@ -5,10 +5,7 @@ from restful_core import *
 
 
 
-## ?! grab only media with a certain cv (media_training), search for media types just with this media training name
-
-
-## ?! merge workflow and job put/post into one call
+## ?! merge job put/post into one call
 ## ?! protect alter comment command
 
 
@@ -17,15 +14,21 @@ from restful_core import *
 ## ?! create workflow types dynamically and fold into media table
 
 
-
-## ?! highlight weak parts of code/unfinished parts of code in a README
 ## ?! test both job submissions
-## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan (need owner and non-unique)
+
+
+## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan (need owner and non-unique), put on wiki
+## ?! highlight weak parts of code/unfinished parts of code in a wiki
+
+
+
+
+
 ## ?! copy git repo to flyem
 ## ?! present stuff sometime on Thursday
 
 ## ?? how to do regular expressions on routes
-
+## ?? occassional crashes -- why??
 
 
 
@@ -50,10 +53,12 @@ def media_route(username, mtype=None, pos1=None, pos2=None):
         return query_handler(media_get, mtype, pos1, pos2)
 
 
-
 ### Workflow POST ###
 # url input: /<owner>/workflows/<workflow type> (tbar, gala-train, gala-segmentation-pipeline)
-# json input: name, description, workflow-interface-version
+# json input: name, description, workflow-interface-version,
+# parameters = [ { "name" : <name>, "value" : <value> }, ... ]
+# workflow-inputs [ {"name" : <name>, "id" : <id> }, ... ]
+# media-inputs [ { "name" : <name>, "id" : <id> }, ... ]
 # json output: workflow-id 
 ### Workflow GET ###
 # url input: /<owner/workflows/<workflow_type=None>/<position1 - position2>
@@ -73,77 +78,32 @@ def workflow_type(username, owner, workflow_type=None, pos1=None, pos2=None):
         return query_handler(workflow_get, owner, workflow_type, pos1, pos2)
 
 
-### Workflow parameter POST ###
-# url input: /<owner>/workflows/<workflow_id>
-# json input: parameters = [ { "name" : <name>, "value" : <value> }, ... ]
-### Workflow parameter PUT ###
-# url input: /<owner>/workflows/<workflow_id>/<parameter name>
-# json input: value 
 ### Workflow parameter GET ###
 # url input: /<owner>/workflows/<workflow id>/parameters/<parameter = None>
 # json output: results = [ {name, value}, ... ]
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['PUT', 'GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters", methods=['GET'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/parameters/<parameter>", methods=['GET'])
 @verify_login
 def workflow_params(username, owner, workflow_id, parameter=None):
-    if request.method == 'POST':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_param_post, workflow_id)
-    elif request.method == 'PUT':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_param_put, workflow_id, parameter)
-    else:
-        return query_handler(workflow_param_get, workflow_id, parameter)     
+    return query_handler(workflow_param_get, workflow_id, parameter)     
 
 
-### Workflow media inputs POST ###
-# url input: <owner>/workflows/<workflow_id>
-# json input: media-inputs [ { "name" : <name>, "id" : <id> }, ... ]
-### Workflow media inputs PUT ###
-# url input: <owner>/workflows/<workflow id>/media-inputs/<input name>/<media id>
 ### Workflow media inputs GET ###
 # url input: /<owner>/workflows/<workflow id>
 # json output: media-inputs [ { "name" : <name>, "id" : <id> }, ... ]
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs/<input_name>/<int:mid>", methods=['PUT'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/media-inputs", methods=['GET'])
 @verify_login
 def workflow_media(username, owner, workflow_id, input_name=None, mid=None):
-    if request.method == 'POST':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_media_post, workflow_id)
-    elif request.method == 'PUT':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_media_put, workflow_id, input_name, mid)
-    else:
-        return query_handler(workflow_media_get, workflow_id)     
+    return query_handler(workflow_media_get, workflow_id)     
 
 
-### Workflow workflow inputs POST ###
-# url input: <owner>/workflows/<workflow_id>
-# json input: workflow-inputs [ {"name" : <name>, "id" : <id> }, ... ]
-### Workflow workflow inputs PUT ###
-# url input: <owner>/workflows/<workflow id>/workflow-inputs/<input name>/<workflow id>
 ### Workflow workflow inputs GET ###
 # url input: /<owner>/workflows/<workflow id>
 # json output: workflow-inputs [ { "name" : <name>, "id" : <id> }, ... ]
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['POST', 'GET'])
-@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs/<input_name>/<int:wid>", methods=['PUT'])
+@app.route("/owners/<owner>/workflows/<int:workflow_id>/workflow-inputs", methods=['GET'])
 @verify_login
 def workflow_workflow(username, owner, workflow_id, wid=None):
-    if request.method == 'POST':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_workflow_post, workflow_id)
-    elif request.method == 'PUT':
-        if owner != username:
-            abort(401)
-        return query_handler(workflow_workflow_put, workflow_id, input_name, wid)
-    else:
-        return query_handler(workflow_workflow_get, workflow_id)     
+    return query_handler(workflow_workflow_get, workflow_id)     
 
 
 ### Job GET ###
