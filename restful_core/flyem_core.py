@@ -143,8 +143,8 @@ def get_cv_term_id(property_name, connection, cv_name = None):
     
 
 # set media file
-def set_media(name, mtype, connection):
-    type_id = get_cv_term_id(mtype, connection)
+def set_media(name, mtype, connection, cv_name = None):
+    type_id = get_cv_term_id(mtype, connection, cv_name)
     lab_id = get_cv_term_id("flyem", connection)
    
 
@@ -386,7 +386,7 @@ def media_post(json_data, connection, mtype):
     filepath = json_data["file-path"]
     
     if name is not None and description is not None and mtype is not None and filepath is not None:
-        media_id, dummy = set_media(name, mtype, connection)
+        media_id, dummy = set_media(name, mtype, connection, "media_training")
         json_data["media-id"] = media_id
         
         set_media_property(media_id, "file_system_path", filepath, connection)
@@ -405,7 +405,9 @@ def media_get(json_data, connection, mtype, pos1, pos2):
     if mtype is not None:
         mtype = media_type[mtype]
         where_str = where_builder(where_str, "cv_term.name", mtype, '=')
-    
+   
+    where_str = where_builder(where_str, "cv.name", "media_training", '=') 
+
     mid = request.args.get('media-id')
     where_str = where_builder(where_str, "media.id", mid, '=')
 
@@ -429,6 +431,7 @@ def media_get(json_data, connection, mtype, pos1, pos2):
     results = connection.execute("SELECT SQL_CALC_FOUND_ROWS mp2.value as description, media_property.value " +
             "AS file_system_path, media.name AS name, media.id AS mid, cv_term.name AS type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
+            "cv ON cv.id = cv_term.cv_id JOIN " +
             "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
             "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
             "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + where_str +
