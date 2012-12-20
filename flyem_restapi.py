@@ -6,11 +6,8 @@ from restful_core import *
 
 
 
-## ?! REMOVE WORKFOW TYPE FROM MEDIA PROPERTY
-## ?! create workflow types dynamically and fold into media table
-
-
 ## ?! test both job submissions
+
 
 
 ## ?! copy documentation of current system over along with dynamic cv-term strategy, state Tom's plan (need owner and non-unique), put on wiki
@@ -68,7 +65,7 @@ def media_route(username, mtype=None, pos1=None, pos2=None):
 @app.route("/owners/<owner>/workflows/<workflow_type>", methods=['POST', 'GET'])
 @app.route("/owners/<owner>/workflows/<workflow_type>/<int:pos1>-<int:pos2>", methods=['GET'])
 @verify_login
-def workflow_type(username, owner, workflow_type=None, pos1=None, pos2=None):
+def workflow_master(username, owner, workflow_type=None, pos1=None, pos2=None):
     if request.method == 'POST':
         if owner != username:
             abort(401)

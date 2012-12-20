@@ -195,12 +195,12 @@ def workflow_post(json_data, connection, owner, workflow_type):
     workflow_interface = json_data["workflow-interface-version"]
 
     if name is not None and description is not None and workflow_interface is not None:
-        media_id, dummy = set_media(name, "workflow", connection)
+        create_workflow_type_id(workflow_type, connection)
+        media_id, dummy = set_media(name, workflow_type, connection, "workflow_types")
         json_data["workflow-id"] = media_id
         
         set_media_property(media_id, "description", description, connection)
         set_media_property(media_id, "owner", owner, connection)
-        set_media_property(media_id, "workflow_type", workflow_type, connection)
         set_media_property(media_id, "workflow_interface_version", workflow_interface, connection)
     else:
         raise Exception("Not all parameters were specified")
@@ -222,12 +222,11 @@ def workflow_get(json_data, connection, owner, workflow_type, pos1, pos2):
     name = request.args.get('name')
     where_str = where_builder(where_str, 'media.name', name)
     
-    where_str = where_builder(where_str, "cv_term.name", "workflow", '=')
+    where_str = where_builder(where_str, "cv.name", "workflow_types", '=')
 
-    where_str = where_builder(where_str, 'cv_term2.name', "workflow_type")
-    where_str = where_builder(where_str, 'media_property.value', workflow_type)
+    where_str = where_builder(where_str, 'cv_term.name', workflow_type, '=')
     temp_type = request.args.get('workflow-type')
-    where_str = where_builder(where_str, 'media_property.value', temp_type)
+    where_str = where_builder(where_str, 'cv_term.name', temp_type, '=')
 
     where_str = where_builder(where_str, 'cv_term3.name', "description")
     description = request.args.get('description')
@@ -240,12 +239,12 @@ def workflow_get(json_data, connection, owner, workflow_type, pos1, pos2):
     workflow_interface = request.args.get('interface-version')
     where_str = where_builder(where_str, 'mp4.value', workflow_interface, '=')
 
-    results = connection.execute("SELECT SQL_CALC_FOUND_ROWS  mp4.value as interface_version, "
-            "mp2.value as description, media_property.value " +
-            "AS workflow_type, media.name AS name, media.id AS id, cv_term.name AS type, " + 
+    results = connection.execute("SELECT SQL_CALC_FOUND_ROWS  mp4.value as interface_version, " +
+            "mp2.value as description, " +
+            "media.name AS name, media.id AS id, cv_term.name AS workflow_type, " + 
             "media.create_date AS date FROM media JOIN cv_term ON cv_term.id = media.type_id JOIN " + 
-            "media_property ON media_property.media_id = media.id JOIN cv_term as cv_term2 " +
-            "ON cv_term2.id = media_property.type_id JOIN media_property AS mp2 ON mp2.media_id = " +
+            "cv ON cv.id = cv_term.cv_id JOIN " +
+            "media_property AS mp2 ON mp2.media_id = " +
             "media.id JOIN cv_term AS cv_term3 ON cv_term3.id = mp2.type_id " + 
             "JOIN media_property AS mp3 ON mp3.media_id = " +
             "media.id JOIN cv_term AS cv_term4 ON cv_term4.id = mp3.type_id " + 
@@ -270,6 +269,13 @@ def workflow_get(json_data, connection, owner, workflow_type, pos1, pos2):
         json_results.append(json_result)
 
     json_data["results"] = json_results
+
+def create_workflow_type_id(name, connection):
+    cv_id_res = connection.execute('SELECT id FROM cv WHERE name = "workflow_types"')
+    cv_id = cv_id_res.first()["id"]
+    connection.execute('INSERT IGNORE INTO cv_term(cv_id, name, definition, is_current, display_name, data_type) ' +
+            'VALUES(' + str(cv_id) + ', "' + name + '", "Workflow type", 1, ' +
+            '"' + name + '", "text");')
 
 def create_param_type_id(name, connection):
     cv_id_res = connection.execute('SELECT id FROM cv WHERE name = "workflow_parameters"')
