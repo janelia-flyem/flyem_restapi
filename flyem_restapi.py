@@ -28,6 +28,7 @@ from restful_core import *
 
 
 
+## !! using first() could be dangerous -- need to check if it is not none
 ## ?? how to do regular expressions on routes
 ## ?? occassional crashes -- why??
 ## ?! make an admin mode for submitting job completion status

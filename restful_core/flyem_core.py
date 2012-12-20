@@ -484,7 +484,7 @@ def workflow_jobs_post(json_data, connection, owner, workflow_id):
     else:
         raise Exception("Not all parameters were specified")
 
-    job_job_post(json_data, connection, media_id):
+    job_job_post(json_data, connection, media_id)
 
 def job_query_get(json_data, connection, owner, complete_status, workflow_id, pos1, pos2, job_id=None):
     where_str = ''
@@ -612,7 +612,9 @@ def workflow_job_comment_get(json_data, connection, job_id):
     results = connection.execute("SELECT media_property.value AS value FROM "
             + "media_property JOIN cv_term ON cv_term.id = media_property.type_id " + where_str)
 
-    json_data["value"] = results.first()["value"]
+    entry = results.first()
+    if entry is not None:
+        json_data["value"] = entry["value"]
 
 
 def job_job_post(json_data, connection, job_id):
