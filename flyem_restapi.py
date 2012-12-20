@@ -5,9 +5,6 @@ from restful_core import *
 
 
 
-## ?! protect alter comment command
-
-
 
 ## ?! REMOVE WORKFOW TYPE FROM MEDIA PROPERTY
 ## ?! create workflow types dynamically and fold into media table

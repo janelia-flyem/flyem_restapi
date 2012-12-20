@@ -600,9 +600,18 @@ def job_complete_put(json_data, connection, owner, job_id):
 def workflow_job_comment_put(json_data, connection, owner, job_id):
     property_id = get_cv_term_id("comment", connection)
 
-    connection.execute('INSERT INTO media_property(media_id, type_id, value) VALUES(' +
-            str(job_id) + ', ' + str(property_id) + ', "' + str(json_data["value"]) + '") ' +
-            'ON DUPLICATE KEY UPDATE value = "' + str(json_data["value"]) + '";')  
+    property_id2 = get_cv_term_id("owner", connection)
+    results = connection.execute('SELECT value FROM media_property WHERE media_id = ' + str(job_id) +
+            ' AND type_id = ' + str(property_id2) + ';')
+
+    entry = results.first()
+
+    if entry is not None and entry["value"] == owner:
+        connection.execute('INSERT INTO media_property(media_id, type_id, value) VALUES(' +
+                str(job_id) + ', ' + str(property_id) + ', "' + str(json_data["value"]) + '") ' +
+                'ON DUPLICATE KEY UPDATE value = "' + str(json_data["value"]) + '";')  
+    else:
+        raise Exception("User " + str(owner) + " cannot modify the comment of " + str(entry["value"]))
 
 def workflow_job_comment_get(json_data, connection, job_id):
     where_str = ''
