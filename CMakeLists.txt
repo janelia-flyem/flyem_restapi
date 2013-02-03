@@ -52,6 +52,7 @@ else ()
     include (flask)
     include (flask_sqlalchemy)
     include (mysql_python)
+    include (python_ldap)
     include (BuildSupport)    
 
     # Install gala
