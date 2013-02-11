@@ -3,6 +3,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 import os
 from config import *
 import binascii
+import ldap
 
 app = Flask(__name__)
 app.secret_key = str(os.urandom(33))
@@ -52,6 +53,8 @@ workflow_job_property["description"] = "description"
 
 # general globals
 authorization_stored = {}
+# hard coded authorization. Turning this off since all authorization should go through ldap
+#authorization_stored["plazas"] = "password"
 NORMAL_REQUEST = 200
 BAD_REQUEST = 400
 
@@ -69,37 +72,59 @@ def verify_login(f):
             username = auth.username
             password = auth.password
             if username in authorization_stored:
-                username_stored, password_stored = authorization_stored[username]
+                password_stored = authorization_stored[username]
                 if password_stored != password:
-                    abort(401)
-                username = username_stored
+                    print "error, password does not match"
+                    abort(401)                
             else:
-                ## !! UNCOMMENT IN PRODUCTION 
-                #conn = ldap.initialize(SERVER)
-                #dn_base = ',ou=People,dc=janelia,dc=org'
-                #dn = 'cn='+request.form['username']+dn_base
-                #pw = request.form['password']
-                #r = conn.bind_s(dn, pw, ldap.AUTH_SIMPLE)
-            
-                # !! COMMENT OUT -- dummy check for now
-                if username != "plazas" or password != "password":
+                # ldap authentification
+                try:
+                    conn = ldap.initialize(SERVER)
+                    dn_base = ',ou=People,dc=janelia,dc=org'
+                    dn = 'cn='+username+dn_base
+                    pw = password
+                    r = conn.bind_s(dn, pw, ldap.AUTH_SIMPLE)
+                    # Working Example of how to search Application Roles in Ldap
+                    search_base = 'cn=DashboardAdmin,ou=FlyEM,ou=ApplicationRoles,dc=janelia,dc=org'
+                    filter = 'cn=*'
+                    attr = ['member']
+                    search_results = conn.search_s(search_base, ldap.SCOPE_BASE, filter, attr)
+                    base, admins = search_results.pop()
+                    access = 0
+                    for i in admins['member']:
+                        #print i #shows dn in ldap group
+                        if i == dn:
+                            access = 1
+                    if access == 1:
+                        print "Access allowed to application"
+                    else:
+                        print "User does not have access to application"
+                        abort(401)
+                except:
+                    error='Error: bad ldap username/password'
+                    print error
                     abort(401)
-        except: 
+        except Exception, e:
+            print "error with authentification. exiting"
+            print e
             abort(401)
 
         if request.method == 'POST' or request.method == 'DELETE' or request.method == 'PUT':
             try:
-                results = db.engine.execute('SELECT user_property.value as perm FROM ' +
-                        'user_property JOIN user ON user.id = user_property.user_id JOIN ' + 
-                        'cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name ' +
-                        '= "workflow_run" and user.name = "' + username + '";')
-
+                sql_query = ('SELECT user_property.value as perm FROM ' +
+                             'user_property JOIN user ON user.id = user_property.user_id JOIN ' +
+                             'cv_term ON cv_term.id = user_property.type_id WHERE cv_term.name ' +
+                             '= "workflow_run" and user.name = "' + username + '";')
+                results = db.engine.execute(sql_query);
                 result =  results.first()
+                #print result
                 if result is None or result["perm"] != '1':
                     abort(401)
+                print "Access to workflow allowed"
             except Exception, e:
-                abort(401) 
-
+                print e
+                abort(401)
+                
         return f(username, *args, **kwargs)
     return wrapper_func
     
