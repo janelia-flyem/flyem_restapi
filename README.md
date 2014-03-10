@@ -1,4 +1,6 @@
-# flyem_restapi: RESTful interface to FlyEM database
+# flyem_restapi [![Picture](https://raw.github.com/janelia-flyem/janelia-flyem.github.com/master/images/gray_janelia_logo.png)](http://janelia.org/)
+
+## RESTful interface to FlyEM database
 
 flyem_restapi is a web server that allows for RESTful call that can
 GET or PUT data in the FlyEM database.  The FlyEM database tracks
